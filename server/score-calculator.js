@@ -8,14 +8,21 @@ function calculateFinalScores(room) {
     const { takerIndex, partnerIndex, contract, petitAuBout, petitAuBoutWinner } = gameState;
     
     // Compter les points du preneur
+    // L'Excuse appartient à l'équipe qui l'a JOUÉE, pas à celle qui a remporté le pli
     let takerPoints = 0;
     players.forEach((player, idx) => {
-        const isTakerTeam = idx === takerIndex || (partnerIndex !== undefined && idx === partnerIndex);
-        if (isTakerTeam) {
-            player.tricksWon.forEach(trick => {
-                takerPoints += calculateTrickPoints(trick);
+        const trickWonByTaker = idx === takerIndex || (partnerIndex !== undefined && idx === partnerIndex);
+        player.tricksWon.forEach(trick => {
+            trick.forEach(tc => {
+                if (tc.card.isExcuse) {
+                    const playedByTaker = tc.playerIndex === takerIndex ||
+                        (partnerIndex !== undefined && tc.playerIndex === partnerIndex);
+                    if (playedByTaker) takerPoints += tc.card.points;
+                } else if (trickWonByTaker) {
+                    takerPoints += tc.card.points;
+                }
             });
-        }
+        });
     });
     
     // Ajouter les cartes écartées (sauf pour garde-sans et garde-contre)
@@ -110,31 +117,56 @@ function calculateFinalScores(room) {
             }
         });
     } else if (maxPlayers === 5) {
-        // À 5 joueurs, le preneur a un partenaire
-        players.forEach((player, idx) => {
-            if (idx === takerIndex) {
-                scores.push({
-                    name: player.name,
-                    score: finalScore * 2, // Le preneur gagne/perd x2
-                    isTaker: true,
-                    isPartner: false
-                });
-            } else if (partnerIndex !== undefined && idx === partnerIndex) {
-                scores.push({
-                    name: player.name,
-                    score: finalScore, // Le partenaire gagne/perd x1
-                    isTaker: false,
-                    isPartner: true
-                });
-            } else {
-                scores.push({
-                    name: player.name,
-                    score: -finalScore,
-                    isTaker: false,
-                    isPartner: false
-                });
-            }
-        });
+        // À 5 joueurs : vérifier si le preneur joue seul
+        // (roi appelé dans sa main ou dans le chien)
+        const takerAlone = partnerIndex === undefined || partnerIndex === takerIndex;
+
+        if (takerAlone) {
+            // Le preneur joue seul contre 4 défenseurs
+            players.forEach((player, idx) => {
+                if (idx === takerIndex) {
+                    scores.push({
+                        name: player.name,
+                        score: finalScore * 4,
+                        isTaker: true,
+                        isPartner: false
+                    });
+                } else {
+                    scores.push({
+                        name: player.name,
+                        score: -finalScore,
+                        isTaker: false,
+                        isPartner: false
+                    });
+                }
+            });
+        } else {
+            // Le preneur a un partenaire
+            players.forEach((player, idx) => {
+                if (idx === takerIndex) {
+                    scores.push({
+                        name: player.name,
+                        score: finalScore * 2,
+                        isTaker: true,
+                        isPartner: false
+                    });
+                } else if (idx === partnerIndex) {
+                    scores.push({
+                        name: player.name,
+                        score: finalScore,
+                        isTaker: false,
+                        isPartner: true
+                    });
+                } else {
+                    scores.push({
+                        name: player.name,
+                        score: -finalScore,
+                        isTaker: false,
+                        isPartner: false
+                    });
+                }
+            });
+        }
     }
     
     return {
@@ -147,21 +179,26 @@ function calculateFinalScores(room) {
 }
 
 // Compter les bouts de l'équipe du preneur
+// L'Excuse appartient à l'équipe qui l'a JOUÉE (tc.playerIndex)
+// Le Petit (1) et le 21 appartiennent à l'équipe qui a remporté le pli
 function countBoutsForTeam(players, takerIndex, partnerIndex) {
     let bouts = 0;
-    
+
     players.forEach((player, idx) => {
-        const isTakerTeam = idx === takerIndex || (partnerIndex !== undefined && idx === partnerIndex);
-        if (isTakerTeam) {
-            player.tricksWon.forEach(trick => {
-                trick.forEach(tc => {
-                    if (tc.card.isExcuse) bouts++;
-                    if (tc.card.isTrump && (tc.card.value === '1' || tc.card.value === '21')) bouts++;
-                });
+        const trickWonByTaker = idx === takerIndex || (partnerIndex !== undefined && idx === partnerIndex);
+        player.tricksWon.forEach(trick => {
+            trick.forEach(tc => {
+                if (tc.card.isExcuse) {
+                    const playedByTaker = tc.playerIndex === takerIndex ||
+                        (partnerIndex !== undefined && tc.playerIndex === partnerIndex);
+                    if (playedByTaker) bouts++;
+                } else if (tc.card.isTrump && (tc.card.value === '1' || tc.card.value === '21')) {
+                    if (trickWonByTaker) bouts++;
+                }
             });
-        }
+        });
     });
-    
+
     return bouts;
 }
 
