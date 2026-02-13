@@ -9,9 +9,12 @@ function handlePlayEvents(io, socket) {
     socket.on('playCard', ({ roomCode, card: cardToPlay }) => {
         const room = getRoom(roomCode);
         if (!room || !room.gameState || room.gameState.phase !== 'playing') return;
-        
+
+        // Bloquer le jeu entre deux plis
+        if (room.gameState.betweenTricks) return;
+
         const playerIndex = room.players.findIndex(p => p.id === socket.id);
-        
+
         if (playerIndex !== room.gameState.currentPlayerIndex) {
             socket.emit('error', { message: 'Ce n\'est pas votre tour' });
             return;
@@ -43,13 +46,21 @@ function handlePlayEvents(io, socket) {
         // Ajouter la carte au pli
         room.gameState.trickCards.push({ playerIndex, card });
         
-        // Déterminer la couleur demandée (premier joueur du pli)
+        // Déterminer la couleur demandée
         if (room.gameState.trickCards.length === 1) {
+            // Première carte du pli
             if (card.isTrump) {
                 room.gameState.leadSuit = 'trump';
             } else if (card.isExcuse) {
-                room.gameState.leadSuit = null; // L'excuse ne définit pas de couleur
+                room.gameState.leadSuit = null; // L'excuse ne définit pas de couleur, le joueur suivant choisit
             } else {
+                room.gameState.leadSuit = card.suit;
+            }
+        } else if (room.gameState.trickCards.length === 2 && room.gameState.leadSuit === null) {
+            // Deuxième carte après une Excuse en ouverture : cette carte définit la couleur du pli
+            if (card.isTrump) {
+                room.gameState.leadSuit = 'trump';
+            } else if (!card.isExcuse) {
                 room.gameState.leadSuit = card.suit;
             }
         }
@@ -123,6 +134,9 @@ function handlePlayEvents(io, socket) {
                 room.gameState.defenseScore += trickPoints;
             }
             
+            // Bloquer le jeu pendant la transition entre plis
+            room.gameState.betweenTricks = true;
+
             // Annoncer le gagnant du pli
             io.to(roomCode).emit('trickComplete', {
                 winnerIndex: winnerIndex,
@@ -131,7 +145,7 @@ function handlePlayEvents(io, socket) {
                 takerScore: room.gameState.takerScore,
                 defenseScore: room.gameState.defenseScore
             });
-            
+
             // Vérifier si c'est le dernier pli
             if (isLastTrick) {
                 // Calculer les scores finaux
@@ -158,6 +172,7 @@ function handlePlayEvents(io, socket) {
                 room.gameState.currentPlayerIndex = winnerIndex;
                 
                 setTimeout(() => {
+                    room.gameState.betweenTricks = false;
                     io.to(roomCode).emit('newTrick', {
                         currentPlayerIndex: winnerIndex,
                         currentTrick: room.gameState.currentTrick,

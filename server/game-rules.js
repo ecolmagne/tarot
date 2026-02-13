@@ -28,9 +28,14 @@ function canPlayCard(card, hand, gameState) {
     }
 
     const leadSuit = gameState.leadSuit;
-    
+
     // L'excuse peut toujours être jouée
     if (card.isExcuse) {
+        return true;
+    }
+
+    // Si l'Excuse a été jouée en ouverture, le joueur suivant choisit librement
+    if (leadSuit === null) {
         return true;
     }
 

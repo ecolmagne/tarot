@@ -1206,9 +1206,14 @@
             }
 
             const leadSuit = state.gameState.leadSuit;
-            
+
             // L'excuse peut toujours être jouée
             if (card.isExcuse) {
+                return true;
+            }
+
+            // Si l'Excuse a été jouée en ouverture, le joueur suivant choisit librement
+            if (leadSuit === null) {
                 return true;
             }
 
@@ -1354,6 +1359,27 @@
             const separatorRow = document.createElement('tr');
             separatorRow.innerHTML = '<td colspan="2" style="height: 20px;"></td>';
             tbody.appendChild(separatorRow);
+
+            // Afficher le chien pour garde-sans et garde-contre (révélé en fin de partie)
+            const contract = state.gameState && state.gameState.contract;
+            if ((contract === 'garde-sans' || contract === 'garde-contre') && state.dogCards && state.dogCards.length > 0) {
+                const dogRow = document.createElement('tr');
+                dogRow.style.background = '#fff3e0';
+                const dogCell = document.createElement('td');
+                dogCell.colSpan = 2;
+                dogCell.style.cssText = 'text-align: center; padding: 15px;';
+                dogCell.innerHTML = '<strong>🎴 Le Chien :</strong><div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px;"></div>';
+                const dogContainer = dogCell.querySelector('div');
+                state.dogCards.forEach(card => {
+                    const cardDiv = createCardElement(card, false);
+                    cardDiv.style.width = '50px';
+                    cardDiv.style.height = '75px';
+                    cardDiv.style.cursor = 'default';
+                    dogContainer.appendChild(cardDiv);
+                });
+                dogRow.appendChild(dogCell);
+                tbody.appendChild(dogRow);
+            }
 
             // Afficher le résultat du contrat
             const takerTotalScore = takerTeam.reduce((sum, s) => sum + s.score, 0);
@@ -1841,10 +1867,13 @@
             // Cacher l'écran d'enchères
             document.getElementById('biddingScreen').style.display = 'none';
             
-            // Sauvegarder et afficher le chien à tous les joueurs
+            // Sauvegarder le chien
             if (dogCards) {
                 state.dogCards = dogCards;
-                displayDogForAll(dogCards);
+                // Afficher le chien seulement pour petite et garde (pas garde-sans ni garde-contre)
+                if (contract === 'petite' || contract === 'garde') {
+                    displayDogForAll(dogCards);
+                }
             }
             
             showMessage(`🎯 ${takerName} prend avec ${formatBid(contract)} !`);
