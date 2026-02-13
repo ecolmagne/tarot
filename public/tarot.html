@@ -721,6 +721,24 @@
             </div>
         </div>
 
+        <!-- Écran d'attente pendant l'écart (pour les défenseurs) -->
+        <div id="waitingDogScreen" style="display: none;">
+            <div style="background: white; border-radius: 20px; padding: 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 1400px; margin: 0 auto; color: #333;">
+                <h2 style="color: #667eea; margin-bottom: 20px; text-align: center;">Le preneur fait son écart</h2>
+                <p style="text-align: center; margin-bottom: 20px; color: #666; font-size: 1.1em;">⏳ En attente...</p>
+
+                <div style="background: #f5f5f5; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center;">
+                    <p><strong>Le chien :</strong></p>
+                    <div id="waitingDogCards" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 10px;"></div>
+                </div>
+
+                <div class="player-hand" style="background: rgba(0,0,0,0.05);">
+                    <div class="hand-title">Votre main (<span id="waitingDogHandCount">0</span> cartes)</div>
+                    <div class="cards-container" id="waitingDogPlayerHand"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Écran d'appel de Roi (5 joueurs) -->
         <div class="king-call-screen" id="kingCallScreen" style="display: none;">
             <div style="background: white; border-radius: 20px; padding: 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 1400px; margin: 0 auto;">
@@ -979,10 +997,41 @@
             socket.emit('startGame', { roomCode: state.roomCode });
         }
 
+        function showWaitingDogScreen() {
+            document.getElementById('biddingScreen').style.display = 'none';
+            document.getElementById('waitingDogScreen').style.display = 'block';
+
+            // Afficher les cartes du chien
+            const container = document.getElementById('waitingDogCards');
+            container.innerHTML = '';
+            if (state.dogCards) {
+                state.dogCards.forEach(card => {
+                    const cardDiv = createCardElement(card, false);
+                    cardDiv.style.width = '60px';
+                    cardDiv.style.height = '90px';
+                    cardDiv.onclick = null;
+                    cardDiv.style.cursor = 'default';
+                    container.appendChild(cardDiv);
+                });
+            }
+
+            // Afficher la main du joueur (lecture seule)
+            const handContainer = document.getElementById('waitingDogPlayerHand');
+            handContainer.innerHTML = '';
+            document.getElementById('waitingDogHandCount').textContent = state.myHand.length;
+            state.myHand.forEach(card => {
+                const cardDiv = createCardElement(card, true);
+                cardDiv.onclick = null;
+                cardDiv.style.cursor = 'default';
+                handContainer.appendChild(cardDiv);
+            });
+        }
+
         function showGameScreen() {
             document.getElementById('lobbyScreen').style.display = 'none';
             document.getElementById('biddingScreen').style.display = 'none';
             document.getElementById('dogScreen').style.display = 'none';
+            document.getElementById('waitingDogScreen').style.display = 'none';
             document.getElementById('kingCallScreen').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'block';
             
@@ -1792,8 +1841,9 @@
             // Cacher l'écran d'enchères
             document.getElementById('biddingScreen').style.display = 'none';
             
-            // Afficher le chien à tous les joueurs
+            // Sauvegarder et afficher le chien à tous les joueurs
             if (dogCards) {
+                state.dogCards = dogCards;
                 displayDogForAll(dogCards);
             }
             
@@ -1833,6 +1883,7 @@
         // Message pour les autres joueurs pendant l'écart
         socket.on('waitingForDog', ({ }) => {
             showMessage('⏳ Le preneur fait son écart...');
+            showWaitingDogScreen();
         });
 
         // L'écart a été validé
@@ -2095,6 +2146,7 @@
             document.getElementById('lobbyScreen').style.display = 'none';
             document.getElementById('biddingScreen').style.display = 'none';
             document.getElementById('dogScreen').style.display = 'none';
+            document.getElementById('waitingDogScreen').style.display = 'none';
             document.getElementById('kingCallScreen').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'none';
             document.getElementById('scoresScreen').style.display = 'none';
