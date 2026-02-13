@@ -1,0 +1,2194 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tarot en ligne</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1400px;
+        }
+
+        /* Écran d'accueil */
+        .welcome-screen {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .welcome-screen h1 {
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .welcome-screen input {
+            padding: 15px;
+            font-size: 1.1em;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 300px;
+            margin-bottom: 20px;
+        }
+
+        .welcome-screen button {
+            padding: 15px 40px;
+            font-size: 1.1em;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+        }
+
+        .welcome-screen button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .player-count-selector {
+            margin: 20px 0;
+        }
+
+        .player-count-selector button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .player-count-selector button.selected {
+            background: #667eea;
+            color: white;
+        }
+
+        /* Salle d'attente */
+        .lobby-screen {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: none;
+        }
+
+        .lobby-screen h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .room-code {
+            background: #f0f0f0;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .share-link {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            word-break: break-all;
+        }
+
+        .players-list {
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .player-item {
+            background: #f5f5f5;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .player-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        /* Table de jeu */
+        .game-screen {
+            display: none;
+            color: white;
+        }
+
+        .game-header {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .game-info {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .info-value {
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .game-table {
+            background: radial-gradient(ellipse at center, #2d5016 0%, #1a3009 100%);
+            border-radius: 20px;
+            padding: 30px;
+            min-height: 400px;
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .players-area {
+            position: relative;
+            width: 100%;
+            min-height: 300px;
+            margin-bottom: 30px;
+        }
+
+        .opponent-player {
+            position: absolute;
+            background: rgba(52, 152, 219, 0.3);
+            border: 3px solid #3498db;
+            border-radius: 15px;
+            padding: 15px 20px;
+            text-align: center;
+            min-width: 120px;
+            transition: all 0.3s;
+        }
+
+        .opponent-player.current-player {
+            background: rgba(46, 204, 113, 0.4);
+            border-color: #27ae60;
+        }
+
+        .opponent-player.current-turn {
+            box-shadow: 0 0 20px rgba(255,215,0,0.8);
+            border: 3px solid gold;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .player-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 1.1em;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .player-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            margin-top: 5px;
+        }
+
+        .center-area {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .center-area > * {
+            pointer-events: auto;
+        }
+
+        .played-card {
+            width: 80px;
+            height: 120px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .played-card:hover {
+            transform: translateY(-10px);
+        }
+
+        .card-suit {
+            font-size: 2em;
+        }
+
+        .card-value {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .player-hand {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .hand-title {
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .cards-container {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 10px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .card {
+            width: 70px;
+            height: 105px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s;
+            flex-shrink: 0;
+            border: 2px solid #d4af37;
+            padding: 4px;
+            position: relative;
+            font-family: 'Times New Roman', serif;
+        }
+
+        .card:hover {
+            transform: translateY(-15px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
+
+        .card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .card.disabled:hover {
+            transform: none;
+        }
+
+        .card.hearts, .card.diamonds {
+            color: #dc143c;
+        }
+
+        .card.clubs, .card.spades {
+            color: #000;
+        }
+
+        .card.trump {
+            background: linear-gradient(135deg, #fff9e6 0%, #ffe6cc 100%);
+            color: #8b4513;
+            border-color: #d4af37;
+        }
+
+        .card-value {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .card-suit {
+            font-size: 1.5em;
+        }
+
+        .card-corner {
+            position: absolute;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .card-corner.top-left {
+            top: 2px;
+            left: 4px;
+        }
+
+        .card-corner.bottom-right {
+            bottom: 2px;
+            right: 4px;
+            transform: rotate(180deg);
+        }
+
+        .card-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+        }
+
+        .card-figure {
+            font-size: 0.65em;
+            text-align: center;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .trump-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #8b4513;
+        }
+
+        .trump-label {
+            font-size: 0.6em;
+            text-transform: uppercase;
+            color: #8b4513;
+            margin-top: -5px;
+        }
+
+        .excuse-star {
+            font-size: 2.5em;
+            color: #ff6b6b;
+        }
+
+        .excuse-label {
+            font-size: 0.55em;
+            text-transform: uppercase;
+            color: #333;
+            margin-top: -8px;
+        }
+
+        .trick-winner {
+            background: rgba(255,215,0,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+            font-size: 1.2em;
+        }
+
+        /* Score */
+        .scores-screen {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: none;
+        }
+
+        .scores-screen h2 {
+            color: #667eea;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .scores-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .scores-table th,
+        .scores-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .scores-table th {
+            background: #667eea;
+            color: white;
+        }
+
+        .winner-row {
+            background: #fff9c4;
+            font-weight: bold;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .welcome-screen,
+            .lobby-screen,
+            .scores-screen {
+                padding: 20px;
+            }
+
+            .welcome-screen h1 {
+                font-size: 1.8em;
+            }
+
+            .game-header {
+                padding: 10px;
+            }
+
+            .game-info {
+                gap: 15px;
+            }
+
+            .info-value {
+                font-size: 1.1em;
+            }
+
+            .game-table {
+                padding: 15px;
+            }
+
+            .players-area {
+                min-height: 250px;
+            }
+
+            .opponent-player {
+                min-width: 90px;
+                padding: 10px 15px;
+                font-size: 0.9em;
+            }
+
+            .center-area {
+                min-height: 150px;
+                margin: 15px 0;
+            }
+
+            .played-card {
+                width: 60px;
+                height: 90px;
+                font-size: 1.2em;
+            }
+
+            .card {
+                width: 60px;
+                height: 90px;
+            }
+
+            .cards-container {
+                gap: 5px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .welcome-screen h1 {
+                font-size: 1.5em;
+            }
+
+            .opponent-player {
+                min-width: 70px;
+                padding: 8px 10px;
+                font-size: 0.8em;
+            }
+
+            .player-name {
+                font-size: 0.9em;
+            }
+
+            .card {
+                width: 50px;
+                height: 75px;
+                font-size: 0.8em;
+            }
+
+            .played-card {
+                width: 50px;
+                height: 75px;
+            }
+        }
+
+        .card.selected {
+            border: 3px solid #f39c12;
+            transform: translateY(-10px);
+            box-shadow: 0 8px 20px rgba(243, 156, 18, 0.5);
+        }
+
+        .bidding-screen,
+        .dog-screen,
+        .king-call-screen {
+            color: #333;
+        }
+
+        .message-banner {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .message-banner.show {
+            display: block;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateX(-50%) translateY(-100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="message-banner" id="messageBanner"></div>
+    
+    <div class="container">
+        <!-- Écran d'accueil -->
+        <div class="welcome-screen" id="welcomeScreen">
+            <h1>🃏 Tarot en ligne</h1>
+            <div>
+                <input type="text" id="playerName" placeholder="Votre nom" maxlength="20">
+            </div>
+            
+            <div class="player-count-selector">
+                <p style="margin-bottom: 10px;">Nombre de joueurs:</p>
+                <button onclick="selectPlayerCount(3)" class="player-count-btn" data-count="3">3 joueurs</button>
+                <button onclick="selectPlayerCount(4)" class="player-count-btn selected" data-count="4">4 joueurs</button>
+                <button onclick="selectPlayerCount(5)" class="player-count-btn" data-count="5">5 joueurs</button>
+            </div>
+            
+            <div>
+                <button onclick="createRoom()">Créer une partie</button>
+                <button onclick="showJoinRoom()">Rejoindre une partie</button>
+            </div>
+            
+            <div id="joinRoomDiv" class="hidden" style="margin-top: 20px;">
+                <input type="text" id="roomCode" placeholder="Code de la partie" maxlength="6">
+                <button onclick="joinRoom()">Rejoindre</button>
+            </div>
+        </div>
+
+        <!-- Salle d'attente -->
+        <div class="lobby-screen" id="lobbyScreen">
+            <h2>Salle d'attente</h2>
+            <div class="room-code">
+                Code: <span id="displayRoomCode"></span>
+            </div>
+            <div class="share-link">
+                <strong>Lien à partager:</strong><br>
+                <span id="shareLink"></span>
+            </div>
+            <button onclick="copyShareLink()" style="margin: 10px 0;">📋 Copier le lien</button>
+            
+            <div class="players-list" id="playersList"></div>
+            
+            <div id="startGameBtn" class="hidden">
+                <button onclick="startGame()">Commencer la partie</button>
+            </div>
+            
+            <button onclick="leaveRoom()" style="background: #e74c3c;">Quitter</button>
+        </div>
+
+        <!-- Interface d'enchères -->
+        <div class="bidding-screen" id="biddingScreen" style="display: none;">
+            <div style="background: white; border-radius: 20px; padding: 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 1400px; margin: 0 auto;">
+                <h2 style="color: #667eea; margin-bottom: 30px; text-align: center;">Phase d'enchères</h2>
+                
+                <div id="biddingInfo" style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin-bottom: 30px; text-align: center;">
+                    <p id="biddingTurnInfo" style="font-size: 1.2em; font-weight: bold; color: #333;"></p>
+                    <div id="currentBids" style="margin-top: 15px; font-size: 0.9em; color: #666;"></div>
+                </div>
+
+                <div id="biddingButtons" style="display: none; text-align: center; margin-bottom: 30px;">
+                    <p style="margin-bottom: 20px; font-weight: bold; color: #333;">Votre enchère :</p>
+                    <div style="display: flex; flex-wrap: wrap; gap: 15px; max-width: 600px; margin: 0 auto; justify-content: center;">
+                        <button onclick="makeBid('pass')" style="padding: 15px 30px; font-size: 1em; background: #95a5a6; color: white; border: none; border-radius: 10px; cursor: pointer; transition: all 0.3s; flex: 1; min-width: 120px;">
+                            Passer
+                        </button>
+                        <button onclick="makeBid('petite')" id="bidPetite" style="padding: 15px 30px; font-size: 1em; background: #3498db; color: white; border: none; border-radius: 10px; cursor: pointer; transition: all 0.3s; flex: 1; min-width: 120px;">
+                            Petite
+                        </button>
+                        <button onclick="makeBid('garde')" id="bidGarde" style="padding: 15px 30px; font-size: 1em; background: #f39c12; color: white; border: none; border-radius: 10px; cursor: pointer; transition: all 0.3s; flex: 1; min-width: 120px;">
+                            Garde
+                        </button>
+                        <button onclick="makeBid('garde-sans')" id="bidGardeSans" style="padding: 15px 30px; font-size: 1em; background: #e74c3c; color: white; border: none; border-radius: 10px; cursor: pointer; transition: all 0.3s; flex: 1; min-width: 120px;">
+                            Garde sans
+                        </button>
+                        <button onclick="makeBid('garde-contre')" id="bidGardeContre" style="padding: 15px 30px; font-size: 1em; background: #8e44ad; color: white; border: none; border-radius: 10px; cursor: pointer; transition: all 0.3s; flex: 1; min-width: 120px;">
+                            Garde contre
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Main du joueur visible pendant les enchères -->
+                <div class="player-hand" style="background: rgba(0,0,0,0.05);">
+                    <div class="hand-title">Votre main (<span id="biddingHandCount">0</span> cartes)</div>
+                    <div class="cards-container" id="biddingPlayerHand"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Écran de l'écart (chien) -->
+        <div class="dog-screen" id="dogScreen" style="display: none;">
+            <div style="background: white; border-radius: 20px; padding: 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                <h2 style="color: #667eea; margin-bottom: 20px; text-align: center;">Faites votre écart</h2>
+                <p style="text-align: center; margin-bottom: 20px; color: #666;">Sélectionnez <span id="dogCardsNeeded">?</span> cartes à écarter (pas d'atouts sauf avec excuse, pas de rois)</p>
+                
+                <div id="dogInfo" style="background: #f5f5f5; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center;">
+                    <p><strong>Le chien :</strong></p>
+                    <div id="dogCards" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 10px;"></div>
+                </div>
+
+                <div style="background: #e8f5e9; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center;">
+                    <p><strong>Cartes sélectionnées pour l'écart : <span id="selectedCount">0</span> / <span id="selectedNeeded">6</span></strong></p>
+                    <div id="selectedCards" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 10px;"></div>
+                </div>
+
+                <div class="player-hand">
+                    <div class="hand-title">Votre main (<span id="dogHandCount">0</span> cartes)</div>
+                    <div class="cards-container" id="dogPlayerHand"></div>
+                </div>
+
+                <div style="text-align: center; margin-top: 20px;">
+                    <button onclick="validateDog()" id="validateDogBtn" style="padding: 15px 40px; font-size: 1.1em; background: #27ae60; color: white; border: none; border-radius: 10px; cursor: pointer; opacity: 0.5;" disabled>
+                        Valider l'écart
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Écran d'appel de Roi (5 joueurs) -->
+        <div class="king-call-screen" id="kingCallScreen" style="display: none;">
+            <div style="background: white; border-radius: 20px; padding: 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 1400px; margin: 0 auto;">
+                <h2 style="color: #667eea; margin-bottom: 30px; text-align: center;">Appel d'un Roi</h2>
+                
+                <div id="kingCallMessage" style="text-align: center; margin-bottom: 30px; font-size: 1.1em; color: #666;">
+                    <p>Le preneur doit appeler un Roi pour jouer avec lui...</p>
+                </div>
+                
+                <div id="kingCallButtons" style="display: none;">
+                    <p style="text-align: center; margin-bottom: 20px; font-weight: bold; color: #333;">Choisissez le Roi que vous appelez :</p>
+                    <div style="display: flex; flex-wrap: wrap; gap: 15px; max-width: 800px; margin: 0 auto; justify-content: center;">
+                        <button onclick="callKing('♠')" style="padding: 15px 30px; font-size: 1em; background: #2c3e50; color: white; border: none; border-radius: 10px; cursor: pointer; flex: 1; min-width: 150px;">
+                            Roi de ♠ Pique
+                        </button>
+                        <button onclick="callKing('♥')" style="padding: 15px 30px; font-size: 1em; background: #e74c3c; color: white; border: none; border-radius: 10px; cursor: pointer; flex: 1; min-width: 150px;">
+                            Roi de ♥ Cœur
+                        </button>
+                        <button onclick="callKing('♣')" style="padding: 15px 30px; font-size: 1em; background: #2c3e50; color: white; border: none; border-radius: 10px; cursor: pointer; flex: 1; min-width: 150px;">
+                            Roi de ♣ Trèfle
+                        </button>
+                        <button onclick="callKing('♦')" style="padding: 15px 30px; font-size: 1em; background: #e74c3c; color: white; border: none; border-radius: 10px; cursor: pointer; flex: 1; min-width: 150px;">
+                            Roi de ♦ Carreau
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Main du preneur visible pendant l'appel -->
+                <div class="player-hand" style="background: rgba(0,0,0,0.05); margin-top: 30px;">
+                    <div class="hand-title">Votre main (<span id="kingCallHandCount">0</span> cartes)</div>
+                    <div class="cards-container" id="kingCallPlayerHand"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table de jeu -->
+        <div class="game-screen" id="gameScreen">
+            <div class="game-header">
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap;">
+                    <div class="game-info">
+                        <div class="info-item">
+                            <span class="info-label">Contrat</span>
+                            <span class="info-value" id="contract">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Preneur</span>
+                            <span class="info-value" id="taker">-</span>
+                        </div>
+                        <div class="info-item" id="calledKingInfo" style="display: none;">
+                            <span class="info-label">Roi appelé</span>
+                            <span class="info-value" id="calledKingValue">-</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Affichage du chien dans le header -->
+                    <div id="dogDisplay" class="hidden" style="background: rgba(255,215,0,0.15); padding: 8px; border-radius: 8px; text-align: center;">
+                        <p style="font-size: 0.8em; margin-bottom: 3px; color: white; font-weight: bold;">🎴 Le Chien</p>
+                        <div style="display: flex; gap: 3px; justify-content: center;" id="dogCardsDisplay"></div>
+                    </div>
+                    
+                    <!-- Affichage du dernier pli -->
+                    <div id="lastTrickDisplay" class="hidden" style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;">
+                        <p style="font-size: 0.8em; margin-bottom: 3px; text-align: center; color: white;">Dernier pli :</p>
+                        <div style="display: flex; gap: 3px; justify-content: center;" id="lastTrickCards"></div>
+                    </div>
+                    
+                    <button onclick="leaveGame()" style="background: #e74c3c; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; color: white; font-size: 1em;">Quitter</button>
+                </div>
+            </div>
+
+            <div class="game-table">
+                <div class="players-area" id="playersArea"></div>
+                
+                <div class="center-area" id="centerArea"></div>
+                
+                <div id="trickWinner" class="trick-winner hidden"></div>
+
+                <!-- Affichage du chien (visible par tous) -->
+                <div class="player-hand">
+                    <div class="hand-title">Votre main (<span id="handCount">0</span> cartes)</div>
+                    <div class="cards-container" id="playerHand"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Écran des scores -->
+        <div class="scores-screen" id="scoresScreen">
+            <h2>🏆 Scores de la partie</h2>
+            <table class="scores-table">
+                <thead>
+                    <tr>
+                        <th>Joueur</th>
+                        <th>Score</th>
+                    </tr>
+                </thead>
+                <tbody id="scoresBody"></tbody>
+            </table>
+            <div style="display: flex; gap: 15px; justify-content: center; margin-top: 30px;">
+                <button onclick="startNewGame()" style="padding: 15px 30px; font-size: 1.1em; background: #27ae60; color: white; border: none; border-radius: 10px; cursor: pointer;">
+                    🔄 Nouvelle partie
+                </button>
+                <button onclick="backToWelcome()" style="padding: 15px 30px; font-size: 1.1em; background: #e74c3c; color: white; border: none; border-radius: 10px; cursor: pointer;">
+                    🏠 Quitter
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // Connexion Socket.io
+        const socket = io();
+
+        // État de l'application
+        const state = {
+            playerName: '',
+            roomCode: '',
+            playerId: null,
+            playerCount: 4,
+            isHost: false,
+            players: [],
+            gameState: null,
+            myHand: [],
+            playedCards: [],
+            currentTrick: 0,
+            selectedDogCards: [],
+            dogCards: [],
+            currentBids: [],
+            lastTrickCards: null
+        };
+
+        function generateRoomCode() {
+            return Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+
+        function generatePlayerId() {
+            return 'player_' + Math.random().toString(36).substring(2, 15);
+        }
+
+        function selectPlayerCount(count) {
+            state.playerCount = count;
+            document.querySelectorAll('.player-count-btn').forEach(btn => {
+                btn.classList.remove('selected');
+                if (parseInt(btn.dataset.count) === count) {
+                    btn.classList.add('selected');
+                }
+            });
+        }
+
+        function showMessage(message, duration = 3000) {
+            const banner = document.getElementById('messageBanner');
+            banner.textContent = message;
+            banner.classList.add('show');
+            setTimeout(() => {
+                banner.classList.remove('show');
+            }, duration);
+        }
+
+        function createRoom() {
+            const name = document.getElementById('playerName').value.trim();
+            if (!name) {
+                showMessage('❌ Veuillez entrer votre nom');
+                return;
+            }
+
+            state.playerName = name;
+            state.isHost = true;
+
+            // Émettre l'événement de création de partie
+            socket.emit('createRoom', {
+                playerName: name,
+                playerCount: state.playerCount
+            });
+        }
+
+        function showJoinRoom() {
+            document.getElementById('joinRoomDiv').classList.remove('hidden');
+        }
+
+        function joinRoom() {
+            const name = document.getElementById('playerName').value.trim();
+            const code = document.getElementById('roomCode').value.trim().toUpperCase();
+
+            if (!name) {
+                showMessage('❌ Veuillez entrer votre nom');
+                return;
+            }
+
+            if (!code) {
+                showMessage('❌ Veuillez entrer le code de la partie');
+                return;
+            }
+
+            state.playerName = name;
+
+            // Émettre l'événement de rejoindre une partie
+            socket.emit('joinRoom', {
+                playerName: name,
+                roomCode: code
+            });
+        }
+
+        function showLobby() {
+            document.getElementById('welcomeScreen').style.display = 'none';
+            document.getElementById('lobbyScreen').style.display = 'block';
+            document.getElementById('displayRoomCode').textContent = state.roomCode;
+            
+            const shareLink = window.location.origin + window.location.pathname + '?room=' + state.roomCode;
+            document.getElementById('shareLink').textContent = shareLink;
+
+            updatePlayersList();
+
+            if (state.isHost) {
+                checkStartGameButton();
+            }
+        }
+
+        function updatePlayersList() {
+            const listDiv = document.getElementById('playersList');
+            listDiv.innerHTML = '<h3>Joueurs (' + state.players.length + '/' + state.playerCount + ')</h3>';
+
+            state.players.forEach(player => {
+                const item = document.createElement('div');
+                item.className = 'player-item';
+                item.innerHTML = `
+                    <div class="player-avatar">${player.name.charAt(0).toUpperCase()}</div>
+                    <div>${player.name}${player.isHost ? ' 👑' : ''}</div>
+                `;
+                listDiv.appendChild(item);
+            });
+        }
+
+        function checkStartGameButton() {
+            const btnDiv = document.getElementById('startGameBtn');
+            
+            if (state.players.length === state.playerCount) {
+                btnDiv.classList.remove('hidden');
+            } else {
+                btnDiv.classList.add('hidden');
+            }
+        }
+
+        function copyShareLink() {
+            const link = document.getElementById('shareLink').textContent;
+            navigator.clipboard.writeText(link).then(() => {
+                showMessage('✅ Lien copié !');
+            });
+        }
+
+        function leaveRoom() {
+            socket.emit('leaveRoom', { roomCode: state.roomCode });
+            backToWelcome();
+        }
+
+        function startGame() {
+            socket.emit('startGame', { roomCode: state.roomCode });
+        }
+
+        function showGameScreen() {
+            document.getElementById('lobbyScreen').style.display = 'none';
+            document.getElementById('biddingScreen').style.display = 'none';
+            document.getElementById('dogScreen').style.display = 'none';
+            document.getElementById('kingCallScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'block';
+            
+            // Ne PAS cacher le chien - il reste visible pendant toute la partie
+            // const dogDisplay = document.getElementById('dogDisplay');
+            // if (dogDisplay) {
+            //     dogDisplay.classList.add('hidden');
+            // }
+            
+            updateGameHeader();
+            renderOpponents();
+            renderPlayerHand();
+        }
+
+        function updateGameHeader() {
+            if (!state.gameState) return;
+            
+            document.getElementById('contract').textContent = state.gameState.contract || '-';
+            document.getElementById('taker').textContent = state.gameState.taker || '-';
+        }
+
+        function renderOpponents() {
+            const area = document.getElementById('playersArea');
+            area.innerHTML = '';
+
+            const playerCount = state.players.length;
+            const myIndex = state.players.findIndex(p => p.id === state.playerId);
+            
+            // Calculer les positions en cercle/polygone
+            const positions = calculatePlayerPositions(playerCount, myIndex);
+            
+            state.players.forEach((player, index) => {
+                const div = document.createElement('div');
+                div.className = 'opponent-player';
+                
+                // Le joueur connecté a un style différent
+                if (player.id === state.playerId) {
+                    div.classList.add('current-player');
+                }
+                
+                // Highlight du joueur dont c'est le tour
+                if (state.gameState && index === state.gameState.currentPlayerIndex) {
+                    div.classList.add('current-turn');
+                }
+                
+                // Position calculée
+                const pos = positions[index];
+                div.style.left = pos.x + '%';
+                div.style.top = pos.y + '%';
+                div.style.transform = 'translate(-50%, -50%)';
+                
+                let badge = '';
+                if (player.id === state.playerId) {
+                    badge = '<div class="player-badge">👤 Vous</div>';
+                }
+                
+                // Trouver la carte jouée par ce joueur dans le pli actuel
+                let playedCardHTML = '';
+                if (state.playedCards && state.playedCards.length > 0) {
+                    const playerCard = state.playedCards.find(pc => pc.playerIndex === index);
+                    if (playerCard) {
+                        const cardDiv = createCardElement(playerCard.card, false);
+                        cardDiv.style.width = '35px';
+                        cardDiv.style.height = '52px';
+                        cardDiv.style.fontSize = '0.5em';
+                        cardDiv.style.display = 'inline-block';
+                        cardDiv.style.marginTop = '5px';
+                        playedCardHTML = '<div style="margin-top: 5px;">' + cardDiv.outerHTML + '</div>';
+                    }
+                }
+                
+                div.innerHTML = `
+                    <div class="player-name">${player.name}</div>
+                    ${badge}
+                    ${playedCardHTML}
+                `;
+                area.appendChild(div);
+            });
+        }
+
+        function calculatePlayerPositions(playerCount, myIndex) {
+            const positions = [];
+            
+            // Réorganiser pour que le joueur soit toujours en bas
+            const orderedIndices = [];
+            for (let i = 0; i < playerCount; i++) {
+                orderedIndices.push((myIndex + i) % playerCount);
+            }
+            
+            if (playerCount === 3) {
+                // Triangle : moi en bas, 2 en haut
+                const layout = {
+                    0: { x: 50, y: 85 },  // Moi en bas
+                    1: { x: 20, y: 20 },  // Gauche en haut
+                    2: { x: 80, y: 20 }   // Droite en haut
+                };
+                orderedIndices.forEach((originalIndex, layoutIndex) => {
+                    positions[originalIndex] = layout[layoutIndex];
+                });
+            } else if (playerCount === 4) {
+                // Carré : moi en bas, 1 à gauche, 1 en haut, 1 à droite
+                const layout = {
+                    0: { x: 50, y: 85 },  // Moi en bas
+                    1: { x: 10, y: 50 },  // Gauche
+                    2: { x: 50, y: 15 },  // Haut
+                    3: { x: 90, y: 50 }   // Droite
+                };
+                orderedIndices.forEach((originalIndex, layoutIndex) => {
+                    positions[originalIndex] = layout[layoutIndex];
+                });
+            } else if (playerCount === 5) {
+                // Pentagone : moi en bas, 2 en haut-côtés, 2 au milieu-côtés
+                const layout = {
+                    0: { x: 50, y: 85 },  // Moi en bas
+                    1: { x: 15, y: 60 },  // Gauche-bas
+                    2: { x: 20, y: 25 },  // Gauche-haut
+                    3: { x: 80, y: 25 },  // Droite-haut
+                    4: { x: 85, y: 60 }   // Droite-bas
+                };
+                orderedIndices.forEach((originalIndex, layoutIndex) => {
+                    positions[originalIndex] = layout[layoutIndex];
+                });
+            }
+            
+            return positions;
+        }
+
+        function renderPlayerHand() {
+            const container = document.getElementById('playerHand');
+            container.innerHTML = '';
+            document.getElementById('handCount').textContent = state.myHand.length;
+
+            state.myHand.forEach((card, index) => {
+                const cardDiv = createCardElement(card, true);
+
+                if (!canPlayCard(card)) {
+                    cardDiv.classList.add('disabled');
+                } else {
+                    cardDiv.onclick = () => playCard(index);
+                }
+
+                container.appendChild(cardDiv);
+            });
+        }
+
+        function canPlayCard(card) {
+            if (!state.gameState || !state.gameState.trickCards) return true;
+            
+            // Règle spéciale : au premier pli UNIQUEMENT, on ne peut pas jouer la couleur du Roi appelé
+            // sauf si c'est le Roi lui-même
+            if (state.gameState.calledKingSuit && state.currentTrick === 1) {
+                if (card.suit === state.gameState.calledKingSuit && 
+                    !(card.value === 'R' && card.suit === state.gameState.calledKingSuit)) {
+                    // C'est la couleur appelée mais pas le Roi
+                    // Vérifier si on a autre chose à jouer
+                    const hasOtherCards = state.myHand.some(c => 
+                        c.suit !== state.gameState.calledKingSuit || 
+                        (c.value === 'R' && c.suit === state.gameState.calledKingSuit) ||
+                        c.isTrump ||
+                        c.isExcuse
+                    );
+                    if (hasOtherCards) {
+                        return false; // On ne peut pas jouer cette carte
+                    }
+                }
+            }
+            // À partir du 2ème pli, on peut jouer normalement la couleur du Roi appelé
+            
+            // Si c'est le premier joueur du pli
+            if (state.gameState.trickCards.length === 0) {
+                return true;
+            }
+
+            const leadSuit = state.gameState.leadSuit;
+            
+            // L'excuse peut toujours être jouée
+            if (card.isExcuse) {
+                return true;
+            }
+
+            // Si on demande un atout
+            if (leadSuit === 'trump') {
+                if (card.isTrump) {
+                    // Obligation de monter : trouver le plus haut atout déjà joué
+                    let highestTrump = 0;
+                    state.gameState.trickCards.forEach(tc => {
+                        if (tc.card.isTrump && !tc.card.isExcuse) {
+                            const trumpValue = parseInt(tc.card.value);
+                            if (trumpValue > highestTrump) {
+                                highestTrump = trumpValue;
+                            }
+                        }
+                    });
+                    
+                    const myTrumpValue = parseInt(card.value);
+                    
+                    // Je dois monter si j'ai un atout plus haut
+                    if (myTrumpValue > highestTrump) {
+                        return true; // Je peux jouer cet atout plus haut
+                    } else {
+                        // Je ne peux jouer cet atout que si je n'ai pas d'atout plus haut
+                        const hasHigherTrump = state.myHand.some(c => 
+                            c.isTrump && !c.isExcuse && parseInt(c.value) > highestTrump
+                        );
+                        return !hasHigherTrump;
+                    }
+                }
+                
+                // Pas d'atout en main
+                const hasTrump = state.myHand.some(c => c.isTrump);
+                return !hasTrump;
+            }
+
+            // Si on demande une couleur
+            if (card.suit === leadSuit) return true;
+            
+            // Si on n'a pas la couleur demandée
+            const hasSuit = state.myHand.some(c => c.suit === leadSuit);
+            if (hasSuit) return false;
+
+            // On doit couper avec un atout
+            if (card.isTrump) {
+                // Si quelqu'un a déjà coupé, on doit surcouper si possible
+                let highestTrump = 0;
+                let someoneAlreadyCut = false;
+                
+                state.gameState.trickCards.forEach(tc => {
+                    if (tc.card.isTrump && !tc.card.isExcuse) {
+                        someoneAlreadyCut = true;
+                        const trumpValue = parseInt(tc.card.value);
+                        if (trumpValue > highestTrump) {
+                            highestTrump = trumpValue;
+                        }
+                    }
+                });
+                
+                if (someoneAlreadyCut) {
+                    const myTrumpValue = parseInt(card.value);
+                    
+                    // Je dois surcouper si j'ai un atout plus haut
+                    if (myTrumpValue > highestTrump) {
+                        return true;
+                    } else {
+                        const hasHigherTrump = state.myHand.some(c => 
+                            c.isTrump && !c.isExcuse && parseInt(c.value) > highestTrump
+                        );
+                        return !hasHigherTrump;
+                    }
+                }
+                
+                return true; // Première coupe, n'importe quel atout
+            }
+            
+            // On peut défausser si on n'a pas d'atout
+            const hasTrump = state.myHand.some(c => c.isTrump);
+            return !hasTrump;
+        }
+
+        function showScores(scores) {
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('scoresScreen').style.display = 'block';
+
+            const tbody = document.getElementById('scoresBody');
+            tbody.innerHTML = '';
+
+            // Trier par score décroissant
+            scores.sort((a, b) => b.score - a.score);
+
+            // Séparer preneur/partenaire et défense
+            const takerTeam = scores.filter(s => s.isTaker || s.isPartner);
+            const defenseTeam = scores.filter(s => !s.isTaker && !s.isPartner);
+            
+            const hasTakerTeam = takerTeam.length > 0;
+            const hasPartner = takerTeam.length > 1;
+
+            // Afficher l'équipe du preneur
+            if (hasTakerTeam) {
+                const headerRow = document.createElement('tr');
+                headerRow.style.background = '#e8f5e9';
+                headerRow.innerHTML = `
+                    <td colspan="2" style="font-weight: bold; text-align: center; padding: 15px; color: #27ae60;">
+                        ${hasPartner ? '🤝 Équipe Preneur' : '👤 Preneur (seul)'}
+                    </td>
+                `;
+                tbody.appendChild(headerRow);
+
+                takerTeam.forEach((s, index) => {
+                    const row = document.createElement('tr');
+                    const badge = s.isTaker ? '👑 Preneur' : '🤝 Partenaire';
+                    row.innerHTML = `
+                        <td style="padding-left: 30px;">${badge} - ${s.name}</td>
+                        <td style="font-weight: bold; color: ${s.score >= 0 ? '#27ae60' : '#e74c3c'};">${s.score > 0 ? '+' : ''}${s.score} points</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            // Afficher l'équipe de défense
+            if (defenseTeam.length > 0) {
+                const headerRow = document.createElement('tr');
+                headerRow.style.background = '#ffebee';
+                headerRow.innerHTML = `
+                    <td colspan="2" style="font-weight: bold; text-align: center; padding: 15px; color: #c62828;">
+                        🛡️ Défense (${defenseTeam.length} joueur${defenseTeam.length > 1 ? 's' : ''})
+                    </td>
+                `;
+                tbody.appendChild(headerRow);
+
+                defenseTeam.forEach((s, index) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td style="padding-left: 30px;">${s.name}</td>
+                        <td style="font-weight: bold; color: ${s.score >= 0 ? '#27ae60' : '#e74c3c'};">${s.score > 0 ? '+' : ''}${s.score} points</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            // Ligne de séparation
+            const separatorRow = document.createElement('tr');
+            separatorRow.innerHTML = '<td colspan="2" style="height: 20px;"></td>';
+            tbody.appendChild(separatorRow);
+
+            // Afficher le résultat du contrat
+            const takerTotalScore = takerTeam.reduce((sum, s) => sum + s.score, 0);
+            const resultRow = document.createElement('tr');
+            resultRow.style.background = takerTotalScore > 0 ? '#c8e6c9' : '#ffcdd2';
+            resultRow.style.fontSize = '1.1em';
+            resultRow.innerHTML = `
+                <td colspan="2" style="text-align: center; padding: 15px; font-weight: bold;">
+                    ${takerTotalScore > 0 ? '✅ Contrat réussi !' : '❌ Contrat chuté'}
+                </td>
+            `;
+            tbody.appendChild(resultRow);
+        }
+
+        // ========== FONCTIONS POUR LES ENCHÈRES ==========
+
+        function showBiddingScreen() {
+            document.getElementById('lobbyScreen').style.display = 'none';
+            document.getElementById('biddingScreen').style.display = 'block';
+            
+            // Rendre la main du joueur
+            renderBiddingHand();
+        }
+
+        function renderBiddingHand() {
+            const container = document.getElementById('biddingPlayerHand');
+            container.innerHTML = '';
+            document.getElementById('biddingHandCount').textContent = state.myHand.length;
+
+            state.myHand.forEach((card, index) => {
+                const cardDiv = createCardElement(card, true);
+                cardDiv.onclick = null; // Pas cliquable pendant les enchères
+                cardDiv.style.cursor = 'default';
+                container.appendChild(cardDiv);
+            });
+        }
+
+        function updateBiddingInfo(currentPlayerIndex, isMyTurn) {
+            const currentPlayer = state.players[currentPlayerIndex];
+            const turnInfo = document.getElementById('biddingTurnInfo');
+            
+            if (isMyTurn) {
+                turnInfo.textContent = '🎯 À vous d\'enchérir !';
+                turnInfo.style.color = '#27ae60';
+                document.getElementById('biddingButtons').style.display = 'block';
+            } else {
+                turnInfo.textContent = `⏳ ${currentPlayer.name} est en train d'enchérir...`;
+                turnInfo.style.color = '#666';
+                document.getElementById('biddingButtons').style.display = 'none';
+            }
+
+            // Afficher les enchères précédentes
+            const bidsDiv = document.getElementById('currentBids');
+            bidsDiv.innerHTML = '';
+            if (state.currentBids.length > 0) {
+                bidsDiv.innerHTML = '<strong>Enchères :</strong><br>' + 
+                    state.currentBids.map(b => `${state.players[b.playerIndex].name}: ${formatBid(b.bid)}`).join(' • ');
+            }
+
+            // Désactiver les enchères inférieures à la meilleure enchère actuelle
+            updateBidButtons();
+        }
+
+        function formatBid(bid) {
+            const labels = {
+                'pass': 'Passe',
+                'petite': 'Petite',
+                'garde': 'Garde',
+                'garde-sans': 'Garde sans',
+                'garde-contre': 'Garde contre'
+            };
+            return labels[bid] || bid;
+        }
+
+        function updateBidButtons() {
+            const bidValues = { 'pass': 0, 'petite': 1, 'garde': 2, 'garde-sans': 3, 'garde-contre': 4 };
+            let highestBidValue = 0;
+
+            state.currentBids.forEach(b => {
+                if (b.bid !== 'pass' && bidValues[b.bid] > highestBidValue) {
+                    highestBidValue = bidValues[b.bid];
+                }
+            });
+
+            // Désactiver les boutons d'enchères qui ne sont pas supérieurs à la meilleure enchère
+            ['petite', 'garde', 'garde-sans', 'garde-contre'].forEach(bid => {
+                const btn = document.getElementById('bid' + bid.charAt(0).toUpperCase() + bid.slice(1).replace('-', ''));
+                if (btn) {
+                    // On ne peut enchérir que si c'est STRICTEMENT supérieur
+                    if (bidValues[bid] <= highestBidValue) {
+                        btn.disabled = true;
+                        btn.style.opacity = '0.5';
+                        btn.style.cursor = 'not-allowed';
+                    } else {
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                        btn.style.cursor = 'pointer';
+                    }
+                }
+            });
+        }
+
+        function makeBid(bid) {
+            socket.emit('makeBid', {
+                roomCode: state.roomCode,
+                bid: bid
+            });
+
+            document.getElementById('biddingButtons').style.display = 'none';
+        }
+
+        // ========== FONCTIONS POUR LE CHIEN ET L'ÉCART ==========
+
+        function showDogScreen(dogCards) {
+            document.getElementById('biddingScreen').style.display = 'none';
+            
+            // Garder le chien visible pour tous - ne pas le masquer
+            // Le chien est déjà affiché dans dogDisplay depuis biddingComplete
+            
+            document.getElementById('dogScreen').style.display = 'block';
+
+            state.dogCards = dogCards;
+            state.selectedDogCards = [];
+
+            // Ajouter les cartes du chien à la main
+            state.myHand = state.myHand.concat(dogCards);
+            sortHand(state.myHand);
+
+            // Afficher le nombre de cartes à écarter
+            const dogSize = dogCards.length;
+            document.getElementById('dogCardsNeeded').textContent = dogSize;
+            document.getElementById('selectedNeeded').textContent = dogSize;
+
+            renderDogCards();
+            renderDogHand();
+        }
+
+        function sortHand(hand) {
+            hand.sort((a, b) => {
+                // L'Excuse va avec les atouts
+                const aIsTrumpOrExcuse = a.isTrump || a.isExcuse;
+                const bIsTrumpOrExcuse = b.isTrump || b.isExcuse;
+                
+                // Les atouts (+ Excuse) à la fin
+                if (aIsTrumpOrExcuse && !bIsTrumpOrExcuse) return 1;
+                if (!aIsTrumpOrExcuse && bIsTrumpOrExcuse) return -1;
+                
+                // Parmi les atouts/excuse
+                if (aIsTrumpOrExcuse && bIsTrumpOrExcuse) {
+                    // L'Excuse en premier (valeur 0)
+                    if (a.isExcuse) return -1;
+                    if (b.isExcuse) return 1;
+                    // Puis les atouts par ordre croissant
+                    return parseInt(a.value) - parseInt(b.value);
+                }
+                
+                // Pour les couleurs : ordre Pique, Cœur, Trèfle, Carreau
+                const suitOrder = { '♠': 0, '♥': 1, '♣': 2, '♦': 3 };
+                if (suitOrder[a.suit] !== suitOrder[b.suit]) {
+                    return suitOrder[a.suit] - suitOrder[b.suit];
+                }
+                
+                // Même couleur : trier par valeur
+                const aVal = isNaN(a.value) ? ({ 'V': 11, 'C': 12, 'D': 13, 'R': 14 }[a.value] || 0) : parseInt(a.value);
+                const bVal = isNaN(b.value) ? ({ 'V': 11, 'C': 12, 'D': 13, 'R': 14 }[b.value] || 0) : parseInt(b.value);
+                
+                return aVal - bVal;
+            });
+        }
+
+        function renderDogCards() {
+            const container = document.getElementById('dogCards');
+            container.innerHTML = '';
+
+            state.dogCards.forEach(card => {
+                const cardDiv = createCardElement(card, false);
+                cardDiv.style.width = '60px';
+                cardDiv.style.height = '90px';
+                container.appendChild(cardDiv);
+            });
+        }
+
+        function renderDogHand() {
+            const container = document.getElementById('dogPlayerHand');
+            container.innerHTML = '';
+            document.getElementById('dogHandCount').textContent = state.myHand.length;
+
+            state.myHand.forEach((card, index) => {
+                const cardDiv = createCardElement(card, true);
+                
+                // Vérifier si la carte est sélectionnée
+                const isSelected = state.selectedDogCards.some(c => 
+                    c.suit === card.suit && c.value === card.value
+                );
+                
+                if (isSelected) {
+                    cardDiv.classList.add('selected');
+                }
+
+                cardDiv.onclick = () => toggleDogCard(card, index);
+                container.appendChild(cardDiv);
+            });
+
+            updateDogSelection();
+        }
+
+        function createCardElement(card, fullSize = true) {
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'card';
+            if (!fullSize) {
+                cardDiv.style.fontSize = '0.8em';
+            }
+            
+            if (card.isTrump) {
+                cardDiv.classList.add('trump');
+                cardDiv.innerHTML = `
+                    <div class="card-center">
+                        <div class="trump-number">${card.value}</div>
+                        <div class="trump-label">Atout</div>
+                    </div>
+                `;
+            } else if (card.isExcuse) {
+                cardDiv.innerHTML = `
+                    <div class="card-center">
+                        <div class="excuse-star">★</div>
+                        <div class="excuse-label">L'Excuse</div>
+                    </div>
+                `;
+            } else {
+                const suitClass = card.suit === '♥' || card.suit === '♦' ? 'hearts' : 'clubs';
+                cardDiv.classList.add(suitClass);
+                
+                // Labels pour les figures
+                const figureLabels = {
+                    'V': 'Valet',
+                    'C': 'Cavalier', 
+                    'D': 'Dame',
+                    'R': 'Roi'
+                };
+                
+                const isFigure = ['V', 'C', 'D', 'R'].includes(card.value);
+                
+                if (isFigure) {
+                    cardDiv.innerHTML = `
+                        <div class="card-corner top-left">
+                            <div>${card.value}</div>
+                            <div>${card.suit}</div>
+                        </div>
+                        <div class="card-center">
+                            <div class="card-figure">${figureLabels[card.value]}</div>
+                            <div class="card-suit" style="font-size: 2em; margin-top: 5px;">${card.suit}</div>
+                        </div>
+                        <div class="card-corner bottom-right">
+                            <div>${card.value}</div>
+                            <div>${card.suit}</div>
+                        </div>
+                    `;
+                } else {
+                    cardDiv.innerHTML = `
+                        <div class="card-corner top-left">
+                            <div>${card.value}</div>
+                            <div>${card.suit}</div>
+                        </div>
+                        <div class="card-center">
+                            <div class="card-suit" style="font-size: 2.5em;">${card.suit}</div>
+                        </div>
+                        <div class="card-corner bottom-right">
+                            <div>${card.value}</div>
+                            <div>${card.suit}</div>
+                        </div>
+                    `;
+                }
+            }
+
+            return cardDiv;
+        }
+
+        function toggleDogCard(card, index) {
+            const expectedCount = state.dogCards.length; // 3 ou 6
+            
+            const isSelected = state.selectedDogCards.some(c => 
+                c.suit === card.suit && c.value === card.value
+            );
+
+            if (isSelected) {
+                // Désélectionner
+                state.selectedDogCards = state.selectedDogCards.filter(c => 
+                    !(c.suit === card.suit && c.value === card.value)
+                );
+            } else {
+                // Vérifier si on peut sélectionner cette carte
+                if (state.selectedDogCards.length >= expectedCount) {
+                    showMessage(`❌ Vous ne pouvez sélectionner que ${expectedCount} cartes`);
+                    return;
+                }
+
+                // Vérifier les règles de l'écart
+                if (card.value === 'R') {
+                    showMessage('❌ Vous ne pouvez pas écarter un Roi');
+                    return;
+                }
+
+                if (card.isTrump) {
+                    // On peut écarter un atout seulement si on a l'Excuse et qu'on l'écarte aussi
+                    const hasExcuse = state.myHand.some(c => c.isExcuse);
+                    const excuseSelected = state.selectedDogCards.some(c => c.isExcuse);
+                    
+                    if (!hasExcuse || !excuseSelected) {
+                        showMessage('❌ Vous ne pouvez écarter un atout que si vous écartez aussi l\'Excuse');
+                        return;
+                    }
+                }
+
+                state.selectedDogCards.push(card);
+            }
+
+            renderDogHand();
+        }
+
+        function updateDogSelection() {
+            const expectedCount = state.dogCards.length; // 3 ou 6
+            document.getElementById('selectedCount').textContent = state.selectedDogCards.length;
+            
+            const selectedContainer = document.getElementById('selectedCards');
+            selectedContainer.innerHTML = '';
+            
+            state.selectedDogCards.forEach(card => {
+                const cardDiv = createCardElement(card, false);
+                cardDiv.style.width = '50px';
+                cardDiv.style.height = '75px';
+                selectedContainer.appendChild(cardDiv);
+            });
+
+            const validateBtn = document.getElementById('validateDogBtn');
+            if (state.selectedDogCards.length === expectedCount) {
+                validateBtn.disabled = false;
+                validateBtn.style.opacity = '1';
+            } else {
+                validateBtn.disabled = true;
+                validateBtn.style.opacity = '0.5';
+            }
+        }
+
+        function validateDog() {
+            const expectedCount = state.dogCards.length; // 3 ou 6 selon le nombre de joueurs
+            
+            if (state.selectedDogCards.length !== expectedCount) {
+                showMessage(`❌ Vous devez sélectionner exactement ${expectedCount} cartes`);
+                return;
+            }
+
+            socket.emit('setDog', {
+                roomCode: state.roomCode,
+                dogCards: state.selectedDogCards
+            });
+
+            // Le serveur va retirer les cartes - on ne modifie pas state.myHand ici
+            state.selectedDogCards = [];
+        }
+
+        // ========== FONCTIONS POUR L'APPEL DE ROI ==========
+
+        function showKingCallScreen() {
+            document.getElementById('biddingScreen').style.display = 'none';
+            document.getElementById('dogScreen').style.display = 'none';
+            document.getElementById('kingCallScreen').style.display = 'block';
+            
+            // Afficher la main du preneur
+            renderKingCallHand();
+        }
+
+        function renderKingCallHand() {
+            const container = document.getElementById('kingCallPlayerHand');
+            container.innerHTML = '';
+            document.getElementById('kingCallHandCount').textContent = state.myHand.length;
+
+            state.myHand.forEach((card, index) => {
+                const cardDiv = createCardElement(card, true);
+                cardDiv.onclick = null; // Pas cliquable pendant l'appel
+                cardDiv.style.cursor = 'default';
+                container.appendChild(cardDiv);
+            });
+        }
+
+        function callKing(suit) {
+            socket.emit('callKing', {
+                roomCode: state.roomCode,
+                suit: suit
+            });
+
+            document.getElementById('kingCallButtons').style.display = 'none';
+            document.getElementById('kingCallMessage').innerHTML = '<p style="color: #27ae60; font-weight: bold;">⏳ En attente du début de la partie...</p>';
+        }
+
+        // ========== GESTION DES ÉVÉNEMENTS SOCKET.IO (MISE À JOUR) ==========
+
+        // Partie créée
+        socket.on('roomCreated', ({ roomCode, playerId, players, maxPlayers }) => {
+            state.roomCode = roomCode;
+            state.playerId = playerId;
+            state.players = players;
+            state.playerCount = maxPlayers;
+            showLobby();
+        });
+
+        // Partie rejointe
+        socket.on('roomJoined', ({ roomCode, playerId, players, maxPlayers }) => {
+            state.roomCode = roomCode;
+            state.playerId = playerId;
+            state.players = players;
+            state.playerCount = maxPlayers;
+            showLobby();
+        });
+
+        // Un joueur a rejoint
+        socket.on('playerJoined', ({ players }) => {
+            state.players = players;
+            updatePlayersList();
+            if (state.isHost) {
+                checkStartGameButton();
+            }
+        });
+
+        // Un joueur a quitté
+        socket.on('playerLeft', ({ players }) => {
+            state.players = players;
+            updatePlayersList();
+            if (state.isHost) {
+                checkStartGameButton();
+            }
+        });
+
+        // La partie a démarré
+        socket.on('gameStarted', ({ hand, gameState, players }) => {
+            state.myHand = hand;
+            state.gameState = {
+                ...gameState,
+                trickCards: []
+            };
+            state.players = players;
+            state.currentTrick = gameState.currentTrick;
+            state.playedCards = [];
+            state.currentBids = [];
+            
+            showMessage('🎴 La partie commence !');
+        });
+
+        // Phase d'enchères
+        socket.on('biddingPhase', ({ currentPlayerIndex }) => {
+            if (!state.gameState) {
+                state.gameState = { currentPlayerIndex };
+            } else {
+                state.gameState.currentPlayerIndex = currentPlayerIndex;
+            }
+            
+            showBiddingScreen();
+            
+            const playerIndex = state.players.findIndex(p => p.id === state.playerId);
+            const isMyTurn = currentPlayerIndex === playerIndex;
+            
+            updateBiddingInfo(currentPlayerIndex, isMyTurn);
+        });
+
+        // Une enchère a été faite
+        socket.on('bidMade', ({ playerIndex, bid, nextPlayerIndex }) => {
+            state.currentBids.push({ playerIndex, bid });
+            
+            const player = state.players[playerIndex];
+            showMessage(`${player.name} : ${formatBid(bid)}`);
+            
+            const myPlayerIndex = state.players.findIndex(p => p.id === state.playerId);
+            const isMyTurn = nextPlayerIndex === myPlayerIndex;
+            
+            updateBiddingInfo(nextPlayerIndex, isMyTurn);
+        });
+
+        // Enchères terminées
+        socket.on('biddingComplete', ({ takerIndex, takerName, contract, dogCards }) => {
+            state.gameState.takerIndex = takerIndex;
+            state.gameState.taker = takerName;
+            state.gameState.contract = contract;
+            state.gameState.phase = 'playing';
+            state.gameState.trickCards = [];
+            
+            // Cacher l'écran d'enchères
+            document.getElementById('biddingScreen').style.display = 'none';
+            
+            // Afficher le chien à tous les joueurs
+            if (dogCards) {
+                displayDogForAll(dogCards);
+            }
+            
+            showMessage(`🎯 ${takerName} prend avec ${formatBid(contract)} !`);
+            
+            // Ne pas passer directement au jeu, attendre les événements serveur
+        });
+
+        function displayDogForAll(dogCards) {
+            const dogDisplay = document.getElementById('dogDisplay');
+            const dogCardsDisplay = document.getElementById('dogCardsDisplay');
+            
+            dogCardsDisplay.innerHTML = '';
+            
+            dogCards.forEach(card => {
+                const cardDiv = createCardElement(card, false);
+                cardDiv.style.width = '35px';
+                cardDiv.style.height = '52px';
+                cardDiv.style.fontSize = '0.5em';
+                cardDiv.onclick = null;
+                cardDiv.style.cursor = 'default';
+                dogCardsDisplay.appendChild(cardDiv);
+            });
+            
+            // Afficher le chien
+            dogDisplay.classList.remove('hidden');
+        }
+
+        // Recevoir le chien
+        socket.on('receiveDog', ({ dogCards }) => {
+            showMessage('🎴 Vous avez reçu le chien !');
+            setTimeout(() => {
+                showDogScreen(dogCards);
+            }, 1500);
+        });
+
+        // Message pour les autres joueurs pendant l'écart
+        socket.on('waitingForDog', ({ }) => {
+            showMessage('⏳ Le preneur fait son écart...');
+        });
+
+        // L'écart a été validé
+        socket.on('dogSet', ({ updatedHand }) => {
+            showMessage('✅ Écart validé !');
+            
+            // Mettre à jour la main avec celle du serveur
+            if (updatedHand) {
+                state.myHand = updatedHand;
+                sortHand(state.myHand);
+                
+                // Forcer le rafraîchissement visuel si on est déjà dans l'écran de jeu
+                if (document.getElementById('gameScreen').style.display === 'block') {
+                    renderPlayerHand();
+                }
+            }
+            
+            document.getElementById('dogScreen').style.display = 'none';
+        });
+
+        // Demande d'appel de Roi
+        socket.on('requestKingCall', ({ isTaker }) => {
+            if (isTaker) {
+                showMessage('👑 Appelez un Roi pour jouer avec vous');
+                setTimeout(() => {
+                    showKingCallScreen();
+                    document.getElementById('kingCallButtons').style.display = 'block';
+                }, 1500);
+            } else {
+                showMessage('👑 Le preneur est en train d\'appeler un Roi...');
+                setTimeout(() => {
+                    showKingCallScreen();
+                    document.getElementById('kingCallButtons').style.display = 'none';
+                    document.getElementById('kingCallMessage').innerHTML = '<p>⏳ Le preneur est en train d\'appeler un Roi...</p>';
+                }, 1500);
+            }
+        });
+
+        // Un Roi a été appelé
+        socket.on('kingCalled', ({ suit, calledKing }) => {
+            showMessage(`👑 Le ${calledKing} a été appelé !`);
+            if (state.gameState) {
+                state.gameState.calledKing = calledKing;
+                state.gameState.calledKingSuit = suit;
+            }
+            
+            // Afficher le Roi appelé dans le header
+            document.getElementById('calledKingInfo').style.display = 'block';
+            document.getElementById('calledKingValue').textContent = calledKing;
+        });
+
+        // Début de la phase de jeu
+        socket.on('startPlaying', ({ hand }) => {
+            showMessage('🎮 C\'est parti !');
+            state.currentTrick = 1; // Initialiser le premier pli
+            
+            // Mettre à jour la main si fournie
+            if (hand) {
+                state.myHand = hand;
+                sortHand(state.myHand);
+            }
+            
+            setTimeout(() => {
+                showGameScreen();
+            }, 1500);
+        });
+
+        // Une carte a été jouée
+        socket.on('cardPlayed', ({ playerIndex, card, trickCards, remainingCards }) => {
+            const player = state.players[playerIndex];
+            
+            // Si c'est le joueur actuel qui a joué
+            if (player.id === state.playerId) {
+                // Retirer la carte de la main
+                const cardIndex = state.myHand.findIndex(c => 
+                    c.suit === card.suit && c.value === card.value
+                );
+                if (cardIndex !== -1) {
+                    state.myHand.splice(cardIndex, 1);
+                }
+                renderPlayerHand();
+            } else {
+                // Mettre à jour le nombre de cartes de l'adversaire
+                player.cardCount = remainingCards;
+                renderOpponents();
+            }
+            
+            state.playedCards = trickCards;
+            renderPlayedCards();
+        });
+
+        // Passer au joueur suivant
+        socket.on('nextPlayer', ({ currentPlayerIndex }) => {
+            state.gameState.currentPlayerIndex = currentPlayerIndex;
+            renderOpponents();
+            
+            const currentPlayer = state.players[currentPlayerIndex];
+            if (currentPlayer.id === state.playerId) {
+                showMessage('🎯 À vous de jouer !');
+            }
+        });
+
+        // Pli terminé
+        socket.on('trickComplete', ({ winnerIndex, winnerName, trickPoints, takerScore, defenseScore }) => {
+            state.gameState.takerScore = takerScore;
+            state.gameState.defenseScore = defenseScore;
+            
+            const winnerDiv = document.getElementById('trickWinner');
+            winnerDiv.innerHTML = `
+                <div style="font-size: 1.1em; margin-bottom: 10px;">
+                    <strong>${winnerName}</strong> remporte le pli ! 
+                    <span style="color: #f39c12;">(+${trickPoints.toFixed(1)} pts)</span>
+                </div>
+                <div style="font-size: 0.9em; opacity: 0.9;">
+                    🎯 Preneur: ${takerScore.toFixed(1)} pts | 🛡️ Défense: ${defenseScore.toFixed(1)} pts
+                </div>
+            `;
+            winnerDiv.classList.remove('hidden');
+            
+            updateGameHeader();
+        });
+
+        // Nouveau pli
+        socket.on('newTrick', ({ currentPlayerIndex, currentTrick, lastTrickCards }) => {
+            const winnerDiv = document.getElementById('trickWinner');
+            winnerDiv.classList.add('hidden');
+            
+            // Sauvegarder et afficher le dernier pli
+            if (lastTrickCards && lastTrickCards.length > 0) {
+                displayLastTrick(lastTrickCards);
+            }
+            
+            // Masquer le chien à partir du 2ème pli
+            if (currentTrick >= 2) {
+                const dogDisplay = document.getElementById('dogDisplay');
+                if (dogDisplay) {
+                    dogDisplay.classList.add('hidden');
+                }
+            }
+            
+            state.playedCards = [];
+            state.gameState.trickCards = [];
+            state.gameState.leadSuit = null;
+            state.gameState.currentPlayerIndex = currentPlayerIndex;
+            state.currentTrick = currentTrick;
+            
+            renderPlayedCards();
+            updateGameHeader();
+            renderOpponents();
+        });
+
+        // Partie terminée
+        socket.on('gameFinished', ({ scores, takerScore, defenseScore, contract, takerName }) => {
+            showMessage(`🎉 Partie terminée ! ${takerName} a fait ${takerScore.toFixed(1)} points`);
+            
+            setTimeout(() => {
+                showScores(scores);
+            }, 3000);
+        });
+
+        // Retour au lobby pour une nouvelle partie
+        socket.on('returnToLobby', ({ players }) => {
+            state.players = players;
+            state.gameState = null;
+            state.myHand = [];
+            state.playedCards = [];
+            state.currentTrick = 0;
+            state.selectedDogCards = [];
+            state.dogCards = [];
+            state.currentBids = [];
+            state.lastTrickCards = null;
+            
+            document.getElementById('scoresScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('lobbyScreen').style.display = 'block';
+            
+            updatePlayersList();
+            showMessage('🎮 Prêt pour une nouvelle partie !');
+        });
+
+        // Tous les joueurs ont passé
+        socket.on('allPassed', () => {
+            showMessage('❌ Tous les joueurs ont passé. Nouvelle donne...');
+            setTimeout(() => {
+                backToWelcome();
+            }, 3000);
+        });
+
+        // Erreur
+        socket.on('error', ({ message }) => {
+            showMessage('❌ ' + message);
+        });
+
+        function playCard(index) {
+            const card = state.myHand[index];
+            
+            if (!canPlayCard(card)) {
+                showMessage('❌ Vous ne pouvez pas jouer cette carte');
+                return;
+            }
+
+            // Envoyer la carte (pas l'index) pour éviter les problèmes de désynchronisation
+            socket.emit('playCard', {
+                roomCode: state.roomCode,
+                card: {
+                    suit: card.suit,
+                    value: card.value,
+                    isTrump: card.isTrump,
+                    isExcuse: card.isExcuse
+                }
+            });
+        }
+
+        function renderPlayedCards() {
+            if (!state.playedCards) return;
+            
+            const center = document.getElementById('centerArea');
+            center.innerHTML = '';
+
+            state.playedCards.forEach(({card}) => {
+                const cardDiv = createCardElement(card, true);
+                cardDiv.style.width = '80px';
+                cardDiv.style.height = '120px';
+                center.appendChild(cardDiv);
+            });
+        }
+
+        function displayLastTrick(trickCards) {
+            if (!trickCards || trickCards.length === 0) return;
+            
+            state.lastTrickCards = trickCards;
+            
+            const lastTrickDisplay = document.getElementById('lastTrickDisplay');
+            const lastTrickCardsContainer = document.getElementById('lastTrickCards');
+            
+            lastTrickCardsContainer.innerHTML = '';
+            
+            trickCards.forEach(({card}) => {
+                const cardDiv = createCardElement(card, false);
+                cardDiv.style.width = '40px';
+                cardDiv.style.height = '60px';
+                cardDiv.style.fontSize = '0.6em';
+                cardDiv.onclick = null;
+                cardDiv.style.cursor = 'default';
+                lastTrickCardsContainer.appendChild(cardDiv);
+            });
+            
+            lastTrickDisplay.classList.remove('hidden');
+        }
+
+        function finishTrick() {
+            // Calculer les points du pli
+            let trickPoints = 0;
+            state.gameState.trickCards.forEach(({card}) => {
+                trickPoints += card.points;
+            });
+
+            // Ajouter au score (simplifié)
+            state.gameState.takerScore += trickPoints;
+
+            const winnerDiv = document.getElementById('trickWinner');
+            winnerDiv.textContent = `Pli remporté ! +${trickPoints.toFixed(1)} points`;
+            winnerDiv.classList.remove('hidden');
+
+            setTimeout(() => {
+                winnerDiv.classList.add('hidden');
+                state.gameState.trickCards = [];
+                state.gameState.leadSuit = null;
+                state.gameState.currentTrick++;
+
+                updateGameHeader();
+                renderPlayedCards();
+
+                if (state.myHand.length === 0) {
+                    endGame();
+                }
+            }, 3000);
+        }
+
+        function endGame() {
+            showMessage('🎉 Partie terminée !');
+            
+            setTimeout(() => {
+                showScores();
+            }, 2000);
+        }
+
+        function showScores() {
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('scoresScreen').style.display = 'block';
+
+            const tbody = document.getElementById('scoresBody');
+            tbody.innerHTML = '';
+
+            // Scores simulés
+            const scores = state.players.map((player, index) => ({
+                name: player.name,
+                score: index === 0 ? 450 : 150 - (index * 30)
+            }));
+
+            scores.sort((a, b) => b.score - a.score);
+
+            scores.forEach((s, index) => {
+                const row = document.createElement('tr');
+                if (index === 0) row.className = 'winner-row';
+                row.innerHTML = `
+                    <td>${index === 0 ? '🏆 ' : ''}${s.name}</td>
+                    <td>${s.score} points</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function leaveGame() {
+            if (confirm('Voulez-vous vraiment quitter la partie ?')) {
+                backToWelcome();
+            }
+        }
+
+        function backToWelcome() {
+            document.getElementById('lobbyScreen').style.display = 'none';
+            document.getElementById('biddingScreen').style.display = 'none';
+            document.getElementById('dogScreen').style.display = 'none';
+            document.getElementById('kingCallScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('scoresScreen').style.display = 'none';
+            document.getElementById('welcomeScreen').style.display = 'block';
+            
+            state.roomCode = '';
+            state.playerId = null;
+            state.isHost = false;
+            state.players = [];
+            state.gameState = null;
+            state.myHand = [];
+        }
+
+        function startNewGame() {
+            socket.emit('restartGame', { roomCode: state.roomCode });
+            
+            // Retour à la salle d'attente
+            document.getElementById('scoresScreen').style.display = 'none';
+            document.getElementById('lobbyScreen').style.display = 'block';
+            
+            showMessage('🔄 Nouvelle partie lancée !');
+        }
+
+        // Gestion du lien partagé
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const roomCode = urlParams.get('room');
+            
+            if (roomCode) {
+                document.getElementById('roomCode').value = roomCode;
+                showJoinRoom();
+            }
+        });
+    </script>
+</body>
+</html>
