@@ -171,7 +171,7 @@ function determineTrickWinner(trickCards, leadSuit) {
         }
     }
 
-    return winnerIndex;
+    return trickCards[winnerIndex].playerIndex;
 }
 
 // Calculer les points requis selon le nombre de bouts

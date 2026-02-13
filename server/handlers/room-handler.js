@@ -28,6 +28,7 @@ function handleRoomEvents(io, socket) {
         
         socket.emit('roomCreated', {
             roomCode: roomCode,
+            playerId: socket.id,
             players: room.players,
             maxPlayers: room.maxPlayers
         });
@@ -63,6 +64,7 @@ function handleRoomEvents(io, socket) {
         // Informer le nouveau joueur
         socket.emit('roomJoined', {
             roomCode: roomCode,
+            playerId: socket.id,
             players: room.players,
             maxPlayers: room.maxPlayers
         });
