@@ -8,20 +8,141 @@ function handleBiddingEvents(io, socket) {
         if (!room || !room.gameState) return;
         
         const playerIndex = room.players.findIndex(p => p.id === socket.id);
-        if (playerIndex !== room.gameState.currentPlayerIndex) return;
+        if (playerIndex !== room.gameState.currentPlayerIndex) {
+            socket.emit('error', { message: 'Ce n\'est pas votre tour d\'enchérir' });
+            return;
+        }
         
         // Enregistrer l'enchère
         room.gameState.bids.push({ playerIndex, bid });
         
-        // TODO: Extraire le code de gestion des enchères de l'ancien server.js
-        // Gérer garde-contre (arrêt immédiat)
-        // Incrémenter currentPlayerIndex
-        // Vérifier si tous ont enchéri
-        // Déterminer le preneur
-        // Afficher le chien à tous
-        // Gérer le chien selon le contrat
+        const player = room.players[playerIndex];
+        console.log(`💰 ${player.name} : ${bid}`);
         
-        console.log(`💰 ${room.players[playerIndex].name} : ${bid}`);
+        // Si Garde contre, arrêter les enchères immédiatement
+        if (bid === 'garde-contre') {
+            room.gameState.takerIndex = playerIndex;
+            room.gameState.taker = player.name;
+            room.gameState.contract = bid;
+            
+            // Annoncer la fin des enchères
+            io.to(roomCode).emit('biddingComplete', {
+                takerIndex: playerIndex,
+                takerName: player.name,
+                contract: bid,
+                dogCards: room.gameState.dog
+            });
+            
+            // Le chien va au preneur
+            room.gameState.dogToTaker = true;
+            
+            if (room.maxPlayers === 5) {
+                // À 5 joueurs : appel de Roi AVANT de voir le chien
+                room.players.forEach(p => {
+                    io.to(p.id).emit('requestKingCall', {
+                        isTaker: p.id === player.id
+                    });
+                });
+            } else {
+                room.gameState.phase = 'playing';
+                room.gameState.currentPlayerIndex = 0;
+                
+                // Envoyer à chaque joueur sa main
+                room.players.forEach((p, idx) => {
+                    io.to(p.id).emit('startPlaying', {
+                        hand: p.hand
+                    });
+                });
+            }
+            return;
+        }
+        
+        // Incrémenter currentPlayerIndex pour passer au joueur suivant
+        room.gameState.currentPlayerIndex = (room.gameState.currentPlayerIndex + 1) % room.players.length;
+        const nextPlayerIndex = room.gameState.currentPlayerIndex;
+        
+        // Envoyer l'enchère à tous
+        io.to(roomCode).emit('bidMade', {
+            playerIndex: playerIndex,
+            bid: bid,
+            nextPlayerIndex: nextPlayerIndex
+        });
+        
+        // Vérifier si tous les joueurs ont enchéri
+        if (room.gameState.bids.length === room.players.length) {
+            // Déterminer le preneur
+            const validBids = room.gameState.bids.filter(b => b.bid !== 'pass');
+            
+            if (validBids.length === 0) {
+                io.to(roomCode).emit('allPassed', {});
+                return;
+            }
+            
+            // Trouver la plus haute enchère
+            const bidValues = { 'petite': 1, 'garde': 2, 'garde-sans': 3, 'garde-contre': 4 };
+            let bestBid = validBids[0];
+            
+            validBids.forEach(b => {
+                if (bidValues[b.bid] > bidValues[bestBid.bid]) {
+                    bestBid = b;
+                }
+            });
+            
+            room.gameState.takerIndex = bestBid.playerIndex;
+            room.gameState.taker = room.players[bestBid.playerIndex].name;
+            room.gameState.contract = bestBid.bid;
+            
+            // Annoncer la fin des enchères et afficher le chien
+            io.to(roomCode).emit('biddingComplete', {
+                takerIndex: bestBid.playerIndex,
+                takerName: room.players[bestBid.playerIndex].name,
+                contract: bestBid.bid,
+                dogCards: room.gameState.dog
+            });
+            
+            // Gestion du chien selon le contrat
+            if (bestBid.bid === 'petite' || bestBid.bid === 'garde') {
+                if (room.maxPlayers === 5) {
+                    room.players.forEach(p => {
+                        io.to(p.id).emit('requestKingCall', {
+                            isTaker: p.id === room.players[bestBid.playerIndex].id
+                        });
+                    });
+                } else {
+                    // Ajouter le chien à la main du preneur
+                    room.players[bestBid.playerIndex].hand = room.players[bestBid.playerIndex].hand.concat(room.gameState.dog);
+                    
+                    io.to(room.players[bestBid.playerIndex].id).emit('receiveDog', {
+                        dogCards: room.gameState.dog
+                    });
+                    
+                    room.players.forEach((p, idx) => {
+                        if (idx !== bestBid.playerIndex) {
+                            io.to(p.id).emit('waitingForDog', {});
+                        }
+                    });
+                }
+            } else if (bestBid.bid === 'garde-sans') {
+                room.gameState.dogToDefense = true;
+                
+                if (room.maxPlayers === 5) {
+                    room.players.forEach(p => {
+                        io.to(p.id).emit('requestKingCall', {
+                            isTaker: p.id === room.players[bestBid.playerIndex].id
+                        });
+                    });
+                } else {
+                    room.gameState.phase = 'playing';
+                    room.gameState.currentPlayerIndex = 0;
+                    
+                    room.players.forEach((p, idx) => {
+                        io.to(p.id).emit('startPlaying', {
+                            hand: p.hand
+                        });
+                    });
+                }
+            }
+        }
     });
 }
 

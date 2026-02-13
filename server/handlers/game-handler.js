@@ -31,7 +31,7 @@ function handleGameEvents(io, socket) {
         room.gameState = {
             phase: 'bidding',
             currentPlayerIndex: 0,
-            currentTrick: 0,
+            currentTrick: 1,
             dog: dog,
             bids: [],
             trickCards: [],
