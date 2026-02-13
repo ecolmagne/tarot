@@ -2083,68 +2083,7 @@
             lastTrickDisplay.classList.remove('hidden');
         }
 
-        function finishTrick() {
-            // Calculer les points du pli
-            let trickPoints = 0;
-            state.gameState.trickCards.forEach(({card}) => {
-                trickPoints += card.points;
-            });
 
-            // Ajouter au score (simplifié)
-            state.gameState.takerScore += trickPoints;
-
-            const winnerDiv = document.getElementById('trickWinner');
-            winnerDiv.textContent = `Pli remporté ! +${trickPoints.toFixed(1)} points`;
-            winnerDiv.classList.remove('hidden');
-
-            setTimeout(() => {
-                winnerDiv.classList.add('hidden');
-                state.gameState.trickCards = [];
-                state.gameState.leadSuit = null;
-                state.gameState.currentTrick++;
-
-                updateGameHeader();
-                renderPlayedCards();
-
-                if (state.myHand.length === 0) {
-                    endGame();
-                }
-            }, 3000);
-        }
-
-        function endGame() {
-            showMessage('🎉 Partie terminée !');
-            
-            setTimeout(() => {
-                showScores();
-            }, 2000);
-        }
-
-        function showScores() {
-            document.getElementById('gameScreen').style.display = 'none';
-            document.getElementById('scoresScreen').style.display = 'block';
-
-            const tbody = document.getElementById('scoresBody');
-            tbody.innerHTML = '';
-
-            // Scores simulés
-            const scores = state.players.map((player, index) => ({
-                name: player.name,
-                score: index === 0 ? 450 : 150 - (index * 30)
-            }));
-
-            scores.sort((a, b) => b.score - a.score);
-
-            scores.forEach((s, index) => {
-                const row = document.createElement('tr');
-                if (index === 0) row.className = 'winner-row';
-                row.innerHTML = `
-                    <td>${index === 0 ? '🏆 ' : ''}${s.name}</td>
-                    <td>${s.score} points</td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
 
         function leaveGame() {
             if (confirm('Voulez-vous vraiment quitter la partie ?')) {
