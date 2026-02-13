@@ -174,7 +174,12 @@ function calculateFinalScores(room) {
         takerPoints,
         requiredPoints,
         difference,
-        contractSuccess: difference >= 0
+        contractSuccess: difference >= 0,
+        takerBouts,
+        multiplier,
+        petitBonus,
+        baseScore,
+        contract
     };
 }
 

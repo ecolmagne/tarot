@@ -157,7 +157,13 @@ function handlePlayEvents(io, socket) {
                         takerScore: result.takerPoints,
                         defenseScore: 91 - result.takerPoints,
                         contract: room.gameState.contract,
-                        takerName: room.gameState.taker
+                        takerName: room.gameState.taker,
+                        requiredPoints: result.requiredPoints,
+                        takerBouts: result.takerBouts,
+                        multiplier: result.multiplier,
+                        petitBonus: result.petitBonus,
+                        baseScore: result.baseScore,
+                        difference: result.difference
                     });
                 }, 3000);
                 
@@ -188,6 +194,113 @@ function handlePlayEvents(io, socket) {
                 currentPlayerIndex: room.gameState.currentPlayerIndex
             });
         }
+    });
+
+    // Debug : sauter au dernier pli en simulant les plis intermédiaires
+    socket.on('skipToLastTrick', ({ roomCode }) => {
+        const room = getRoom(roomCode);
+        if (!room || !room.gameState || room.gameState.phase !== 'playing') return;
+
+        const playerCount = room.players.length;
+
+        // Simuler les plis tant qu'il reste plus d'une carte en main
+        while (room.players[0].hand.length > 1) {
+            room.gameState.trickCards = [];
+            room.gameState.leadSuit = null;
+
+            // Chaque joueur joue une carte valide
+            for (let i = 0; i < playerCount; i++) {
+                const idx = (room.gameState.currentPlayerIndex + i) % playerCount;
+                const player = room.players[idx];
+
+                // Trouver la première carte jouable
+                const playableCard = player.hand.find(c => canPlayCard(c, player.hand, room.gameState));
+                if (!playableCard) break;
+
+                // Retirer de la main
+                const cardIdx = player.hand.indexOf(playableCard);
+                player.hand.splice(cardIdx, 1);
+
+                // Ajouter au pli
+                room.gameState.trickCards.push({ playerIndex: idx, card: playableCard });
+
+                // Déterminer la couleur demandée
+                if (room.gameState.trickCards.length === 1) {
+                    if (playableCard.isTrump) {
+                        room.gameState.leadSuit = 'trump';
+                    } else if (playableCard.isExcuse) {
+                        room.gameState.leadSuit = null;
+                    } else {
+                        room.gameState.leadSuit = playableCard.suit;
+                    }
+                } else if (room.gameState.trickCards.length === 2 && room.gameState.leadSuit === null) {
+                    if (playableCard.isTrump) {
+                        room.gameState.leadSuit = 'trump';
+                    } else if (!playableCard.isExcuse) {
+                        room.gameState.leadSuit = playableCard.suit;
+                    }
+                }
+            }
+
+            // Résoudre le pli
+            const winnerIndex = determineTrickWinner(room.gameState.trickCards, room.gameState.leadSuit);
+
+            // Gérer l'Excuse
+            let excusePlayerIndex = null;
+            const excuseCard = room.gameState.trickCards.find(tc => {
+                if (tc.card.isExcuse) {
+                    excusePlayerIndex = tc.playerIndex;
+                    return true;
+                }
+                return false;
+            });
+
+            let trickPoints = calculateTrickPoints(room.gameState.trickCards);
+
+            if (excuseCard) {
+                trickPoints -= excuseCard.card.points;
+                const excuseToTaker = (excusePlayerIndex === room.gameState.takerIndex ||
+                    (room.gameState.partnerIndex !== undefined && excusePlayerIndex === room.gameState.partnerIndex));
+                if (excuseToTaker) {
+                    room.gameState.takerScore += excuseCard.card.points;
+                } else {
+                    room.gameState.defenseScore += excuseCard.card.points;
+                }
+            }
+
+            // Ajouter le pli au gagnant
+            room.players[winnerIndex].tricksWon.push(room.gameState.trickCards);
+
+            // Mettre à jour les scores
+            const isTakerTrick = (winnerIndex === room.gameState.takerIndex ||
+                (room.gameState.partnerIndex !== undefined && winnerIndex === room.gameState.partnerIndex));
+            if (isTakerTrick) {
+                room.gameState.takerScore += trickPoints;
+            } else {
+                room.gameState.defenseScore += trickPoints;
+            }
+
+            room.gameState.currentTrick++;
+            room.gameState.currentPlayerIndex = winnerIndex;
+        }
+
+        // Préparer le dernier pli
+        room.gameState.trickCards = [];
+        room.gameState.leadSuit = null;
+        room.gameState.betweenTricks = false;
+
+        // Envoyer l'état mis à jour à chaque joueur
+        room.players.forEach((player) => {
+            io.to(player.id).emit('skipToLastTrickDone', {
+                hand: player.hand,
+                currentPlayerIndex: room.gameState.currentPlayerIndex,
+                currentTrick: room.gameState.currentTrick,
+                takerScore: room.gameState.takerScore,
+                defenseScore: room.gameState.defenseScore
+            });
+        });
+
+        console.log(`⏩ Debug: sauté au pli ${room.gameState.currentTrick} dans ${roomCode}`);
     });
 }
 

@@ -1,5 +1,6 @@
 // Gestion des enchères
 const { getRoom } = require('../room-manager');
+const { createDeck, shuffleDeck, dealCards, sortHand } = require('../deck-utils');
 
 function handleBiddingEvents(io, socket) {
     
@@ -75,6 +76,63 @@ function handleBiddingEvents(io, socket) {
             
             if (validBids.length === 0) {
                 io.to(roomCode).emit('allPassed', {});
+
+                // Redistribuer après un délai
+                setTimeout(() => {
+                    // Le prochain premier enchérisseur est le suivant du précédent
+                    const previousFirstBidder = room.gameState.firstBidderIndex || 0;
+                    const newFirstBidder = (previousFirstBidder + 1) % room.players.length;
+
+                    // Créer et mélanger un nouveau jeu
+                    const deck = createDeck();
+                    shuffleDeck(deck);
+                    const { hands, dog } = dealCards(deck, room.maxPlayers);
+
+                    // Réassigner les mains
+                    room.players.forEach((player, index) => {
+                        player.hand = sortHand(hands[index]);
+                        player.tricksWon = [];
+                    });
+
+                    // Réinitialiser l'état du jeu
+                    room.gameState = {
+                        phase: 'bidding',
+                        currentPlayerIndex: newFirstBidder,
+                        firstBidderIndex: newFirstBidder,
+                        currentTrick: 1,
+                        dog: dog,
+                        bids: [],
+                        trickCards: [],
+                        leadSuit: null,
+                        takerScore: 0,
+                        defenseScore: 0
+                    };
+
+                    // Envoyer les nouvelles cartes à chaque joueur
+                    room.players.forEach((player, index) => {
+                        io.to(player.id).emit('gameStarted', {
+                            hand: player.hand,
+                            gameState: {
+                                phase: room.gameState.phase,
+                                currentPlayerIndex: room.gameState.currentPlayerIndex,
+                                currentTrick: room.gameState.currentTrick
+                            },
+                            players: room.players.map(p => ({
+                                id: p.id,
+                                name: p.name,
+                                isHost: p.isHost
+                            }))
+                        });
+                    });
+
+                    // Démarrer la nouvelle phase d'enchères
+                    io.to(roomCode).emit('biddingPhase', {
+                        currentPlayerIndex: newFirstBidder
+                    });
+
+                    console.log(`🔄 Redistribution dans ${roomCode}, enchères à ${room.players[newFirstBidder].name}`);
+                }, 3000);
+
                 return;
             }
             

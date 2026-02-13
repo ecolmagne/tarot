@@ -806,6 +806,7 @@
                     </div>
                     
                     <button onclick="leaveGame()" style="background: #e74c3c; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; color: white; font-size: 1em;">Quitter</button>
+                    <button id="debugSkipBtn" onclick="skipToLastTrick()" style="display: none; background: #f39c12; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; color: white; font-size: 1em;">⏩ Dernier pli</button>
                 </div>
             </div>
 
@@ -1034,13 +1035,12 @@
             document.getElementById('waitingDogScreen').style.display = 'none';
             document.getElementById('kingCallScreen').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'block';
-            
-            // Ne PAS cacher le chien - il reste visible pendant toute la partie
-            // const dogDisplay = document.getElementById('dogDisplay');
-            // if (dogDisplay) {
-            //     dogDisplay.classList.add('hidden');
-            // }
-            
+
+            // Nettoyer les résidus de la partie précédente
+            document.getElementById('centerArea').innerHTML = '';
+            document.getElementById('lastTrickDisplay').classList.add('hidden');
+            document.getElementById('debugSkipBtn').style.display = 'none';
+
             updateGameHeader();
             renderOpponents();
             renderPlayerHand();
@@ -1295,12 +1295,81 @@
             return !hasTrump;
         }
 
-        function showScores(scores) {
+        function showScores(scores, detail) {
             document.getElementById('gameScreen').style.display = 'none';
             document.getElementById('scoresScreen').style.display = 'block';
 
             const tbody = document.getElementById('scoresBody');
             tbody.innerHTML = '';
+
+            const contractLabels = {
+                'petite': 'Petite',
+                'garde': 'Garde',
+                'garde-sans': 'Garde sans',
+                'garde-contre': 'Garde contre'
+            };
+
+            // Détail du calcul
+            if (detail) {
+                const detailRow = document.createElement('tr');
+                detailRow.style.background = '#e3f2fd';
+                const detailCell = document.createElement('td');
+                detailCell.colSpan = 2;
+                detailCell.style.cssText = 'padding: 15px;';
+
+                const contractLabel = contractLabels[detail.contract] || detail.contract;
+                const success = detail.difference >= 0;
+                const successIcon = success ? '✅' : '❌';
+                const petitLine = detail.petitBonus !== 0
+                    ? `<tr><td>Petit au bout</td><td style="text-align:right;">${detail.petitBonus > 0 ? '+' : ''}${detail.petitBonus}</td></tr>`
+                    : '';
+
+                const absDiff = Math.abs(detail.difference).toFixed(1);
+                const signedTotal = success ? detail.baseScore * detail.multiplier : -(detail.baseScore * detail.multiplier);
+                const petitPart = detail.petitBonus !== 0 ? ` ${detail.petitBonus > 0 ? '+' : '-'} ${Math.abs(detail.petitBonus)}` : '';
+                const formulaSign = success ? '' : '-';
+                const scoreColor = success ? '#27ae60' : '#e74c3c';
+
+                detailCell.innerHTML = `
+                    <table style="width:100%; border-collapse:collapse; font-size:0.95em;">
+                        <tr style="border-bottom:1px solid #90caf9;">
+                            <td style="padding:4px 0;"><strong>Annonce</strong></td>
+                            <td style="text-align:right; padding:4px 0;"><strong>${contractLabel} (x${detail.multiplier})</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:4px 0;">Points du preneur</td>
+                            <td style="text-align:right;">${detail.takerScore.toFixed(1)}</td>
+                        </tr>
+                        <tr>
+                            <td>Points de la défense</td>
+                            <td style="text-align:right;">${detail.defenseScore.toFixed(1)}</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid #90caf9;">
+                            <td>Bouts du preneur</td>
+                            <td style="text-align:right;">${detail.takerBouts} bout${detail.takerBouts > 1 ? 's' : ''} → contrat de ${detail.requiredPoints} pts</td>
+                        </tr>
+                        <tr>
+                            <td>Différence</td>
+                            <td style="text-align:right; color: ${detail.difference >= 0 ? '#27ae60' : '#e74c3c'};">${detail.difference >= 0 ? '+' : ''}${detail.difference.toFixed(1)} pts ${successIcon}</td>
+                        </tr>
+                        <tr>
+                            <td>${success ? 'Bonus contrat' : 'Malus contrat'}</td>
+                            <td style="text-align:right; color: ${scoreColor};">${success ? '+' : '-'}25</td>
+                        </tr>
+                        ${petitLine}
+                        <tr style="border-top:1px solid #90caf9; font-weight:bold;">
+                            <td style="padding:6px 0;">Score du preneur</td>
+                            <td style="text-align:right; color: ${scoreColor};">${formulaSign}(${absDiff} + 25${petitPart}) x ${detail.multiplier} = ${signedTotal > 0 ? '+' : ''}${signedTotal}</td>
+                        </tr>
+                    </table>
+                `;
+                detailRow.appendChild(detailCell);
+                tbody.appendChild(detailRow);
+
+                const sep = document.createElement('tr');
+                sep.innerHTML = '<td colspan="2" style="height: 10px;"></td>';
+                tbody.appendChild(sep);
+            }
 
             // Trier par score décroissant
             scores.sort((a, b) => b.score - a.score);
@@ -1308,7 +1377,7 @@
             // Séparer preneur/partenaire et défense
             const takerTeam = scores.filter(s => s.isTaker || s.isPartner);
             const defenseTeam = scores.filter(s => !s.isTaker && !s.isPartner);
-            
+
             const hasTakerTeam = takerTeam.length > 0;
             const hasPartner = takerTeam.length > 1;
 
@@ -2051,6 +2120,8 @@
                 if (dogDisplay) {
                     dogDisplay.classList.add('hidden');
                 }
+                // Afficher le bouton debug pour sauter au dernier pli
+                document.getElementById('debugSkipBtn').style.display = 'inline-block';
             }
             
             state.playedCards = [];
@@ -2065,11 +2136,15 @@
         });
 
         // Partie terminée
-        socket.on('gameFinished', ({ scores, takerScore, defenseScore, contract, takerName }) => {
+        socket.on('gameFinished', ({ scores, takerScore, defenseScore, contract, takerName, requiredPoints, takerBouts, multiplier, petitBonus, baseScore, difference }) => {
             showMessage(`🎉 Partie terminée ! ${takerName} a fait ${takerScore.toFixed(1)} points`);
-            
+
             setTimeout(() => {
-                showScores(scores);
+                showScores(scores, {
+                    takerScore, defenseScore, contract, takerName,
+                    requiredPoints, takerBouts, multiplier, petitBonus,
+                    baseScore, difference
+                });
             }, 3000);
         });
 
@@ -2093,12 +2168,10 @@
             showMessage('🎮 Prêt pour une nouvelle partie !');
         });
 
-        // Tous les joueurs ont passé
+        // Tous les joueurs ont passé → redistribution automatique
         socket.on('allPassed', () => {
+            state.currentBids = [];
             showMessage('❌ Tous les joueurs ont passé. Nouvelle donne...');
-            setTimeout(() => {
-                backToWelcome();
-            }, 3000);
         });
 
         // Erreur
@@ -2164,6 +2237,29 @@
         }
 
 
+
+        function skipToLastTrick() {
+            document.getElementById('debugSkipBtn').style.display = 'none';
+            socket.emit('skipToLastTrick', { roomCode: state.roomCode });
+        }
+
+        socket.on('skipToLastTrickDone', ({ hand, currentPlayerIndex, currentTrick, takerScore, defenseScore }) => {
+            state.myHand = hand;
+            state.playedCards = [];
+            state.gameState.trickCards = [];
+            state.gameState.leadSuit = null;
+            state.gameState.currentPlayerIndex = currentPlayerIndex;
+            state.currentTrick = currentTrick;
+
+            document.getElementById('debugSkipBtn').style.display = 'none';
+            document.getElementById('lastTrickDisplay').classList.add('hidden');
+
+            renderPlayerHand();
+            renderPlayedCards();
+            renderOpponents();
+            updateGameHeader();
+            showMessage(`⏩ Sauté au pli ${currentTrick} | Preneur: ${takerScore.toFixed(1)} pts | Défense: ${defenseScore.toFixed(1)} pts`);
+        });
 
         function leaveGame() {
             if (confirm('Voulez-vous vraiment quitter la partie ?')) {
