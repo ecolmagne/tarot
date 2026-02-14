@@ -621,7 +621,7 @@
                 <button onclick="selectPlayerCount(5)" class="player-count-btn" data-count="5">5 joueurs</button>
             </div>
             
-            <div>
+            <div id="roomButtons">
                 <button onclick="createRoom()">Créer une partie</button>
                 <button onclick="showJoinRoom()">Rejoindre une partie</button>
             </div>
@@ -696,6 +696,9 @@
         <div class="dog-screen" id="dogScreen" style="display: none;">
             <div style="background: white; border-radius: 20px; padding: 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
                 <h2 style="color: #667eea; margin-bottom: 20px; text-align: center;">Faites votre écart</h2>
+                <div id="calledKingDogInfo" style="display: none; text-align: center; margin-bottom: 15px; background: rgba(102,126,234,0.1); padding: 10px; border-radius: 10px;">
+                    <span style="font-weight: bold; color: #667eea;">Roi appelé :</span> <span id="calledKingDog" style="font-size: 1.1em;">-</span>
+                </div>
                 <p style="text-align: center; margin-bottom: 20px; color: #666;">Sélectionnez <span id="dogCardsNeeded">?</span> cartes à écarter (pas d'atouts sauf avec excuse, pas de rois)</p>
                 
                 <div id="dogInfo" style="background: #f5f5f5; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center;">
@@ -725,6 +728,9 @@
         <div id="waitingDogScreen" style="display: none;">
             <div style="background: white; border-radius: 20px; padding: 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 1400px; margin: 0 auto; color: #333;">
                 <h2 style="color: #667eea; margin-bottom: 20px; text-align: center;">Le preneur fait son écart</h2>
+                <div id="calledKingWaitingInfo" style="display: none; text-align: center; margin-bottom: 15px; background: rgba(102,126,234,0.1); padding: 10px; border-radius: 10px;">
+                    <span style="font-weight: bold; color: #667eea;">Roi appelé :</span> <span id="calledKingWaiting" style="font-size: 1.1em;">-</span>
+                </div>
                 <p style="text-align: center; margin-bottom: 20px; color: #666; font-size: 1.1em;">⏳ En attente...</p>
 
                 <div style="background: #f5f5f5; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center;">
@@ -1000,7 +1006,15 @@
 
         function showWaitingDogScreen() {
             document.getElementById('biddingScreen').style.display = 'none';
+            document.getElementById('kingCallScreen').style.display = 'none';
             document.getElementById('waitingDogScreen').style.display = 'block';
+
+            // Afficher le roi appelé si à 5 joueurs
+            const calledKingWaiting = document.getElementById('calledKingWaiting');
+            if (calledKingWaiting && state.gameState && state.gameState.calledKing) {
+                calledKingWaiting.textContent = state.gameState.calledKing;
+                document.getElementById('calledKingWaitingInfo').style.display = 'block';
+            }
 
             // Afficher les cartes du chien
             const container = document.getElementById('waitingDogCards');
@@ -1180,21 +1194,33 @@
         function canPlayCard(card) {
             if (!state.gameState || !state.gameState.trickCards) return true;
             
-            // Règle spéciale : au premier pli UNIQUEMENT, on ne peut pas jouer la couleur du Roi appelé
-            // sauf si c'est le Roi lui-même
+            // Règle spéciale : au premier pli, la couleur du Roi appelé est protégée
             if (state.gameState.calledKingSuit && state.currentTrick === 1) {
-                if (card.suit === state.gameState.calledKingSuit && 
-                    !(card.value === 'R' && card.suit === state.gameState.calledKingSuit)) {
-                    // C'est la couleur appelée mais pas le Roi
-                    // Vérifier si on a autre chose à jouer
-                    const hasOtherCards = state.myHand.some(c => 
-                        c.suit !== state.gameState.calledKingSuit || 
-                        (c.value === 'R' && c.suit === state.gameState.calledKingSuit) ||
-                        c.isTrump ||
-                        c.isExcuse
-                    );
-                    if (hasOtherCards) {
-                        return false; // On ne peut pas jouer cette carte
+                const isFirstPlayer = state.gameState.trickCards.length === 0;
+                const isCalledKing = card.value === 'R' && card.suit === state.gameState.calledKingSuit;
+
+                // Déterminer la couleur d'entame depuis les cartes jouées
+                let leadSuitForKing = null;
+                if (state.gameState.trickCards.length > 0) {
+                    const firstCard = state.gameState.trickCards[0].card;
+                    if (firstCard.isTrump) leadSuitForKing = 'trump';
+                    else if (!firstCard.isExcuse) leadSuitForKing = firstCard.suit;
+                }
+                const leadIsCalledSuit = leadSuitForKing === state.gameState.calledKingSuit;
+
+                if (card.suit === state.gameState.calledKingSuit && !card.isTrump && !card.isExcuse) {
+                    if (isCalledKing && !isFirstPlayer) {
+                        const hasOtherCards = state.myHand.some(c =>
+                            !(c.value === 'R' && c.suit === state.gameState.calledKingSuit)
+                        );
+                        if (hasOtherCards) return false;
+                    } else if (!isCalledKing && !leadIsCalledSuit) {
+                        const hasOtherCards = state.myHand.some(c =>
+                            c.suit !== state.gameState.calledKingSuit ||
+                            c.isTrump ||
+                            c.isExcuse
+                        );
+                        if (hasOtherCards) return false;
                     }
                 }
             }
@@ -2299,9 +2325,11 @@
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const roomCode = urlParams.get('room');
-            
+
             if (roomCode) {
                 document.getElementById('roomCode').value = roomCode;
+                document.querySelector('.player-count-selector').style.display = 'none';
+                document.getElementById('roomButtons').style.display = 'none';
                 showJoinRoom();
             }
         });

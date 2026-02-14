@@ -128,21 +128,36 @@ export function renderPlayerHand() {
 export function canPlayCard(card) {
     if (!state.gameState || !state.gameState.trickCards) return true;
     
-    // Règle spéciale : au premier pli UNIQUEMENT, on ne peut pas jouer la couleur du Roi appelé
-    // sauf si c'est le Roi lui-même
+    // Règle spéciale : au premier pli, la couleur du Roi appelé est protégée
     if (state.gameState.calledKingSuit && state.currentTrick === 1) {
-        if (card.suit === state.gameState.calledKingSuit && 
-            !(card.value === 'R' && card.suit === state.gameState.calledKingSuit)) {
-            // C'est la couleur appelée mais pas le Roi
-            // Vérifier si on a autre chose à jouer
-            const hasOtherCards = state.myHand.some(c => 
-                c.suit !== state.gameState.calledKingSuit || 
-                (c.value === 'R' && c.suit === state.gameState.calledKingSuit) ||
-                c.isTrump ||
-                c.isExcuse
-            );
-            if (hasOtherCards) {
-                return false; // On ne peut pas jouer cette carte
+        const isFirstPlayer = state.gameState.trickCards.length === 0;
+        const isCalledKing = card.value === 'R' && card.suit === state.gameState.calledKingSuit;
+
+        // Déterminer la couleur d'entame depuis les cartes jouées
+        let leadSuitForKing = null;
+        if (state.gameState.trickCards.length > 0) {
+            const firstCard = state.gameState.trickCards[0].card;
+            if (firstCard.isTrump) leadSuitForKing = 'trump';
+            else if (!firstCard.isExcuse) leadSuitForKing = firstCard.suit;
+        }
+        const leadIsCalledSuit = leadSuitForKing === state.gameState.calledKingSuit;
+
+        if (card.suit === state.gameState.calledKingSuit && !card.isTrump && !card.isExcuse) {
+            if (isCalledKing && !isFirstPlayer) {
+                // Le roi appelé ne peut être joué que par le premier joueur du pli
+                const hasOtherCards = state.myHand.some(c =>
+                    !(c.value === 'R' && c.suit === state.gameState.calledKingSuit)
+                );
+                if (hasOtherCards) return false;
+            } else if (!isCalledKing && !leadIsCalledSuit) {
+                // Les autres cartes de la couleur sont interdites,
+                // sauf si le roi appelé a été joué en ouverture (on suit la couleur)
+                const hasOtherCards = state.myHand.some(c =>
+                    c.suit !== state.gameState.calledKingSuit ||
+                    c.isTrump ||
+                    c.isExcuse
+                );
+                if (hasOtherCards) return false;
             }
         }
     }

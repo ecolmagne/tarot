@@ -41,11 +41,19 @@ export function initDog() {
 
 function showDogScreen(dogCards) {
     document.getElementById('biddingScreen').style.display = 'none';
-    
+    document.getElementById('kingCallScreen').style.display = 'none';
+
     // Garder le chien visible pour tous - ne pas le masquer
     // Le chien est déjà affiché dans dogDisplay depuis biddingComplete
-    
+
     document.getElementById('dogScreen').style.display = 'block';
+
+    // Afficher le roi appelé si à 5 joueurs
+    const calledKingDog = document.getElementById('calledKingDog');
+    if (calledKingDog && state.gameState && state.gameState.calledKing) {
+        calledKingDog.textContent = state.gameState.calledKing;
+        document.getElementById('calledKingDogInfo').style.display = 'block';
+    }
 
     state.dogCards = dogCards;
     state.selectedDogCards = [];
