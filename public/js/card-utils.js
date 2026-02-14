@@ -1,37 +1,29 @@
 // Utilitaires pour la gestion des cartes
-
 import { state } from './state.js';
 
 // Trier la main du joueur
 export function sortHand(hand) {
     hand.sort((a, b) => {
-        // L'Excuse va avec les atouts
         const aIsTrumpOrExcuse = a.isTrump || a.isExcuse;
         const bIsTrumpOrExcuse = b.isTrump || b.isExcuse;
-        
-        // Les atouts (+ Excuse) à la fin
+
         if (aIsTrumpOrExcuse && !bIsTrumpOrExcuse) return 1;
         if (!aIsTrumpOrExcuse && bIsTrumpOrExcuse) return -1;
-        
-        // Parmi les atouts/excuse
+
         if (aIsTrumpOrExcuse && bIsTrumpOrExcuse) {
-            // L'Excuse en premier (valeur 0)
             if (a.isExcuse) return -1;
             if (b.isExcuse) return 1;
-            // Puis les atouts par ordre croissant
             return parseInt(a.value) - parseInt(b.value);
         }
-        
-        // Pour les couleurs : ordre Pique, Cœur, Trèfle, Carreau
+
         const suitOrder = { '♠': 0, '♥': 1, '♣': 2, '♦': 3 };
         if (suitOrder[a.suit] !== suitOrder[b.suit]) {
             return suitOrder[a.suit] - suitOrder[b.suit];
         }
-        
-        // Même couleur : trier par valeur
+
         const aVal = isNaN(a.value) ? ({ 'V': 11, 'C': 12, 'D': 13, 'R': 14 }[a.value] || 0) : parseInt(a.value);
         const bVal = isNaN(b.value) ? ({ 'V': 11, 'C': 12, 'D': 13, 'R': 14 }[b.value] || 0) : parseInt(b.value);
-        
+
         return aVal - bVal;
     });
 }
@@ -43,60 +35,67 @@ export function createCardElement(card, fullSize = true) {
     if (!fullSize) {
         cardDiv.style.fontSize = '0.8em';
     }
-    
-    // Excuse
-    if (card.isExcuse) {
-        cardDiv.classList.add('excuse');
-        cardDiv.innerHTML = `
-            <div class="card-corner" style="top: 5px; left: 5px;">★</div>
-            <div class="card-center">
-                <div class="excuse-star">★</div>
-                <div style="font-size: 0.5em; margin-top: 5px;">L'EXCUSE</div>
-            </div>
-            <div class="card-corner" style="bottom: 5px; right: 5px; transform: rotate(180deg);">★</div>
-        `;
-        return cardDiv;
-    }
-    
-    // Atout
+
     if (card.isTrump) {
         cardDiv.classList.add('trump');
         cardDiv.innerHTML = `
-            <div class="card-corner" style="top: 5px; left: 5px;">${card.value}</div>
             <div class="card-center">
                 <div class="trump-number">${card.value}</div>
-                <div style="font-size: 0.4em; margin-top: 5px;">ATOUT</div>
+                <div class="trump-label">Atout</div>
             </div>
-            <div class="card-corner" style="bottom: 5px; right: 5px; transform: rotate(180deg);">${card.value}</div>
         `;
-        return cardDiv;
-    }
-    
-    // Couleur
-    const colorClass = (card.suit === '♥' || card.suit === '♦') ? 'red' : 'black';
-    cardDiv.classList.add(colorClass);
-    
-    // Figure ou nombre
-    let centerContent = '';
-    if (['V', 'C', 'D', 'R'].includes(card.value)) {
-        const figures = { 'V': 'Valet', 'C': 'Cavalier', 'D': 'Dame', 'R': 'Roi' };
-        centerContent = `<div class="card-figure">${figures[card.value]}</div>`;
+    } else if (card.isExcuse) {
+        cardDiv.innerHTML = `
+            <div class="card-center">
+                <div class="excuse-star">★</div>
+                <div class="excuse-label">L'Excuse</div>
+            </div>
+        `;
     } else {
-        centerContent = `<div style="font-size: 2em;">${card.suit}</div>`;
+        const suitClass = card.suit === '♥' || card.suit === '♦' ? 'hearts' : 'clubs';
+        cardDiv.classList.add(suitClass);
+
+        const figureLabels = {
+            'V': 'Valet',
+            'C': 'Cavalier',
+            'D': 'Dame',
+            'R': 'Roi'
+        };
+
+        const isFigure = ['V', 'C', 'D', 'R'].includes(card.value);
+
+        if (isFigure) {
+            cardDiv.innerHTML = `
+                <div class="card-corner top-left">
+                    <div>${card.value}</div>
+                    <div>${card.suit}</div>
+                </div>
+                <div class="card-center">
+                    <div class="card-figure">${figureLabels[card.value]}</div>
+                    <div class="card-suit" style="font-size: 2em; margin-top: 5px;">${card.suit}</div>
+                </div>
+                <div class="card-corner bottom-right">
+                    <div>${card.value}</div>
+                    <div>${card.suit}</div>
+                </div>
+            `;
+        } else {
+            cardDiv.innerHTML = `
+                <div class="card-corner top-left">
+                    <div>${card.value}</div>
+                    <div>${card.suit}</div>
+                </div>
+                <div class="card-center">
+                    <div class="card-suit" style="font-size: 2.5em;">${card.suit}</div>
+                </div>
+                <div class="card-corner bottom-right">
+                    <div>${card.value}</div>
+                    <div>${card.suit}</div>
+                </div>
+            `;
+        }
     }
-    
-    cardDiv.innerHTML = `
-        <div class="card-corner" style="top: 5px; left: 5px;">
-            ${card.value}<br>${card.suit}
-        </div>
-        <div class="card-center">
-            ${centerContent}
-        </div>
-        <div class="card-corner" style="bottom: 5px; right: 5px; transform: rotate(180deg);">
-            ${card.value}<br>${card.suit}
-        </div>
-    `;
-    
+
     return cardDiv;
 }
 
@@ -104,7 +103,7 @@ export function createCardElement(card, fullSize = true) {
 export function renderPlayerHand() {
     const container = document.getElementById('playerHand');
     if (!container) return;
-    
+
     container.innerHTML = '';
     const handCount = document.getElementById('handCount');
     if (handCount) {
@@ -117,7 +116,7 @@ export function renderPlayerHand() {
         if (!canPlayCard(card)) {
             cardDiv.classList.add('disabled');
         } else {
-            cardDiv.onclick = () => playCard(index);
+            cardDiv.onclick = () => window.playCard(index);
         }
 
         container.appendChild(cardDiv);
@@ -127,9 +126,9 @@ export function renderPlayerHand() {
 // Vérifier si une carte peut être jouée
 export function canPlayCard(card) {
     if (!state.gameState || !state.gameState.trickCards) return true;
-    
+
     // Règle spéciale : au premier pli, la couleur du Roi appelé est protégée
-    if (state.gameState.calledKingSuit && state.currentTrick === 1) {
+    if (state.gameState.calledKingSuit && state.currentTrick === 1 && state.playerCount === 5) {
         const isFirstPlayer = state.gameState.trickCards.length === 0;
         const isCalledKing = card.value === 'R' && card.suit === state.gameState.calledKingSuit;
 
@@ -161,24 +160,40 @@ export function canPlayCard(card) {
             }
         }
     }
-    // À partir du 2ème pli, on peut jouer normalement la couleur du Roi appelé
-    
+
     // Si c'est le premier joueur du pli
-    if (state.gameState.trickCards.length === 0) {
+    if (state.gameState.trickCards.length === 0 || state.playerCount !== 5) {
         return true;
     }
 
-    const leadSuit = state.gameState.leadSuit;
-    
+    // Déterminer la couleur d'entame depuis les cartes jouées
+    let leadSuit = null;
+    if (state.gameState.trickCards.length > 0) {
+        const firstCard = state.gameState.trickCards[0].card;
+        if (firstCard.isTrump) leadSuit = 'trump';
+        else if (!firstCard.isExcuse) leadSuit = firstCard.suit;
+
+        // Si l'Excuse a été jouée en ouverture, le 2ème joueur définit la couleur
+        if (leadSuit === null && state.gameState.trickCards.length >= 2) {
+            const secondCard = state.gameState.trickCards[1].card;
+            if (secondCard.isTrump) leadSuit = 'trump';
+            else if (!secondCard.isExcuse) leadSuit = secondCard.suit;
+        }
+    }
+
     // L'excuse peut toujours être jouée
     if (card.isExcuse) {
+        return true;
+    }
+
+    // Si l'Excuse a été jouée en ouverture, le joueur suivant choisit librement
+    if (leadSuit === null) {
         return true;
     }
 
     // Si on demande un atout
     if (leadSuit === 'trump') {
         if (card.isTrump) {
-            // Obligation de monter : trouver le plus haut atout déjà joué
             let highestTrump = 0;
             state.gameState.trickCards.forEach(tc => {
                 if (tc.card.isTrump && !tc.card.isExcuse) {
@@ -188,37 +203,34 @@ export function canPlayCard(card) {
                     }
                 }
             });
-            
+
             const myTrumpValue = parseInt(card.value);
-            
-            // Je dois monter si j'ai un atout plus haut
+
             if (myTrumpValue > highestTrump) {
                 return true;
             } else {
-                const hasHigherTrump = state.myHand.some(c => 
+                const hasHigherTrump = state.myHand.some(c =>
                     c.isTrump && !c.isExcuse && parseInt(c.value) > highestTrump
                 );
                 return !hasHigherTrump;
             }
         }
-        
+
         const hasTrump = state.myHand.some(c => c.isTrump);
         return !hasTrump;
     }
 
     // Si on demande une couleur
     if (card.suit === leadSuit) return true;
-    
-    // Si on n'a pas la couleur demandée
+
     const hasSuit = state.myHand.some(c => c.suit === leadSuit);
     if (hasSuit) return false;
 
     // On doit couper avec un atout
     if (card.isTrump) {
-        // Si quelqu'un a déjà coupé, on doit surcouper si possible
         let highestTrump = 0;
         let someoneAlreadyCut = false;
-        
+
         state.gameState.trickCards.forEach(tc => {
             if (tc.card.isTrump && !tc.card.isExcuse) {
                 someoneAlreadyCut = true;
@@ -228,23 +240,23 @@ export function canPlayCard(card) {
                 }
             }
         });
-        
+
         if (someoneAlreadyCut) {
             const myTrumpValue = parseInt(card.value);
-            
+
             if (myTrumpValue > highestTrump) {
                 return true;
             } else {
-                const hasHigherTrump = state.myHand.some(c => 
+                const hasHigherTrump = state.myHand.some(c =>
                     c.isTrump && !c.isExcuse && parseInt(c.value) > highestTrump
                 );
                 return !hasHigherTrump;
             }
         }
-        
+
         return true;
     }
-    
+
     // On peut défausser si on n'a pas d'atout
     const hasTrump = state.myHand.some(c => c.isTrump);
     return !hasTrump;

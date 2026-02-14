@@ -9,30 +9,25 @@ import { state } from './state.js';
 
 // Initialiser l'application
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🎴 Application Tarot chargée');
-    
     // Initialiser tous les modules dans le bon ordre
     initSocket();
-    console.log('✅ Socket.io initialisé');
-    
     initUI();
-    console.log('✅ Interface utilisateur initialisée');
-    
     initBidding();
-    console.log('✅ Module enchères initialisé');
-    
     initDog();
-    console.log('✅ Module chien initialisé');
-    
     initKingCall();
-    console.log('✅ Module appel de Roi initialisé');
-    
     initGame();
-    console.log('✅ Module jeu initialisé');
-    
-    console.log('🎮 Tous les modules initialisés avec succès !');
+
+    // Gestion du lien partage (?room=CODE)
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomCode = urlParams.get('room');
+
+    if (roomCode) {
+        document.getElementById('roomCode').value = roomCode;
+        document.querySelector('.player-count-selector').style.display = 'none';
+        document.getElementById('roomButtons').style.display = 'none';
+        window.showJoinRoom();
+    }
 });
 
 // Exporter pour debug
 window.tarotState = state;
-console.log('💡 État de l\'application accessible via window.tarotState');

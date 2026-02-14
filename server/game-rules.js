@@ -3,7 +3,7 @@
 // Vérifier si une carte peut être jouée
 function canPlayCard(card, hand, gameState) {
     // Règle spéciale : au premier pli, la couleur du Roi appelé est protégée
-    if (gameState.calledKingSuit && gameState.currentTrick === 1) {
+    if (gameState.calledKingSuit && gameState.currentTrick === 1 && gameState.playerCount === 5) {
         const isFirstPlayer = gameState.trickCards.length === 0;
         const isCalledKing = card.value === 'R' && card.suit === gameState.calledKingSuit;
         const leadIsCalledSuit = gameState.leadSuit === gameState.calledKingSuit;
@@ -30,7 +30,7 @@ function canPlayCard(card, hand, gameState) {
     // À partir du 2ème pli, on peut jouer normalement la couleur du Roi appelé
     
     // Premier joueur du pli
-    if (gameState.trickCards.length === 0) {
+    if (gameState.trickCards.length === 0 || gameState.playerCount !== 5) {
         return true;
     }
 

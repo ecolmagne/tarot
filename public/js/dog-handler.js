@@ -1,40 +1,39 @@
 // Gestion du chien et de l'écart
 import { state } from './state.js';
 import { getSocket } from './socket-handler.js';
-import { showMessage } from './ui-handler.js';
-import { sortHand, createCardElement } from './card-utils.js';
+import { showMessage, showWaitingDogScreen } from './ui-handler.js';
+import { sortHand, createCardElement, renderPlayerHand } from './card-utils.js';
 
 export function initDog() {
     const socket = getSocket();
-    
+
     // Recevoir le chien
     socket.on('receiveDog', ({ dogCards }) => {
-        showMessage('🎴 Vous avez reçu le chien !');
+        showMessage('Vous avez reçu le chien !');
         setTimeout(() => {
             showDogScreen(dogCards);
         }, 1500);
     });
-    
+
     // Message pour les autres joueurs pendant l'écart
     socket.on('waitingForDog', () => {
-        showMessage('⏳ Le preneur fait son écart...');
+        showMessage('Le preneur fait son écart...');
+        showWaitingDogScreen();
     });
-    
+
     // L'écart a été validé
     socket.on('dogSet', ({ updatedHand }) => {
-        showMessage('✅ Écart validé !');
-        
-        // Mettre à jour la main avec celle du serveur
+        showMessage('Écart validé !');
+
         if (updatedHand) {
             state.myHand = updatedHand;
             sortHand(state.myHand);
-            
-            // Forcer le rafraîchissement visuel si on est déjà dans l'écran de jeu
+
             if (document.getElementById('gameScreen').style.display === 'block') {
                 renderPlayerHand();
             }
         }
-        
+
         document.getElementById('dogScreen').style.display = 'none';
     });
 }
@@ -42,10 +41,6 @@ export function initDog() {
 function showDogScreen(dogCards) {
     document.getElementById('biddingScreen').style.display = 'none';
     document.getElementById('kingCallScreen').style.display = 'none';
-
-    // Garder le chien visible pour tous - ne pas le masquer
-    // Le chien est déjà affiché dans dogDisplay depuis biddingComplete
-
     document.getElementById('dogScreen').style.display = 'block';
 
     // Afficher le roi appelé si à 5 joueurs
@@ -66,7 +61,7 @@ function showDogScreen(dogCards) {
     const dogSize = dogCards.length;
     const dogCardsNeededEl = document.getElementById('dogCardsNeeded');
     const selectedNeededEl = document.getElementById('selectedNeeded');
-    
+
     if (dogCardsNeededEl) dogCardsNeededEl.textContent = dogSize;
     if (selectedNeededEl) selectedNeededEl.textContent = dogSize;
 
@@ -77,7 +72,7 @@ function showDogScreen(dogCards) {
 function renderDogCards() {
     const container = document.getElementById('dogCards');
     if (!container) return;
-    
+
     container.innerHTML = '';
 
     state.dogCards.forEach(card => {
@@ -91,9 +86,9 @@ function renderDogCards() {
 function renderDogHand() {
     const container = document.getElementById('dogPlayerHand');
     if (!container) return;
-    
+
     container.innerHTML = '';
-    
+
     const dogHandCountEl = document.getElementById('dogHandCount');
     if (dogHandCountEl) {
         dogHandCountEl.textContent = state.myHand.length;
@@ -101,12 +96,11 @@ function renderDogHand() {
 
     state.myHand.forEach((card, index) => {
         const cardDiv = createCardElement(card, true);
-        
-        // Vérifier si la carte est sélectionnée
-        const isSelected = state.selectedDogCards.some(c => 
+
+        const isSelected = state.selectedDogCards.some(c =>
             c.suit === card.suit && c.value === card.value
         );
-        
+
         if (isSelected) {
             cardDiv.classList.add('selected');
         }
@@ -118,38 +112,34 @@ function renderDogHand() {
     updateDogSelection();
 }
 
-export function toggleDogCard(card, index) {
-    const expectedCount = state.dogCards.length; // 3 ou 6
-    
-    const isSelected = state.selectedDogCards.some(c => 
+function toggleDogCard(card) {
+    const expectedCount = state.dogCards.length;
+
+    const isSelected = state.selectedDogCards.some(c =>
         c.suit === card.suit && c.value === card.value
     );
 
     if (isSelected) {
-        // Désélectionner
-        state.selectedDogCards = state.selectedDogCards.filter(c => 
+        state.selectedDogCards = state.selectedDogCards.filter(c =>
             !(c.suit === card.suit && c.value === card.value)
         );
     } else {
-        // Vérifier si on peut sélectionner cette carte
         if (state.selectedDogCards.length >= expectedCount) {
-            showMessage(`❌ Vous ne pouvez sélectionner que ${expectedCount} cartes`);
+            showMessage(`Vous ne pouvez sélectionner que ${expectedCount} cartes`);
             return;
         }
 
-        // Vérifier les règles de l'écart
         if (card.value === 'R') {
-            showMessage('❌ Vous ne pouvez pas écarter un Roi');
+            showMessage('Vous ne pouvez pas écarter un Roi');
             return;
         }
 
         if (card.isTrump) {
-            // On peut écarter un atout seulement si on a l'Excuse et qu'on l'écarte aussi
             const hasExcuse = state.myHand.some(c => c.isExcuse);
             const excuseSelected = state.selectedDogCards.some(c => c.isExcuse);
-            
+
             if (!hasExcuse || !excuseSelected) {
-                showMessage('❌ Vous ne pouvez écarter un atout que si vous écartez aussi l\'Excuse');
+                showMessage('Vous ne pouvez écarter un atout que si vous écartez aussi l\'Excuse');
                 return;
             }
         }
@@ -162,17 +152,16 @@ export function toggleDogCard(card, index) {
 
 function updateDogSelection() {
     const expectedCount = state.dogCards.length;
-    
+
     const selectedCountEl = document.getElementById('selectedCount');
     if (selectedCountEl) {
         selectedCountEl.textContent = state.selectedDogCards.length;
     }
-    
-    // Afficher les cartes sélectionnées
+
     const selectedCardsContainer = document.getElementById('selectedCards');
     if (selectedCardsContainer) {
         selectedCardsContainer.innerHTML = '';
-        
+
         state.selectedDogCards.forEach(card => {
             const cardDiv = createCardElement(card, false);
             cardDiv.style.width = '50px';
@@ -180,8 +169,7 @@ function updateDogSelection() {
             selectedCardsContainer.appendChild(cardDiv);
         });
     }
-    
-    // Activer/désactiver le bouton de validation
+
     const validateBtn = document.getElementById('validateDogBtn');
     if (validateBtn) {
         const canValidate = state.selectedDogCards.length === expectedCount;
@@ -190,11 +178,11 @@ function updateDogSelection() {
     }
 }
 
-export function validateDog() {
+function validateDog() {
     const expectedCount = state.dogCards.length;
-    
+
     if (state.selectedDogCards.length !== expectedCount) {
-        showMessage(`❌ Vous devez sélectionner exactement ${expectedCount} cartes`);
+        showMessage(`Vous devez sélectionner exactement ${expectedCount} cartes`);
         return;
     }
 
@@ -204,14 +192,7 @@ export function validateDog() {
         dogCards: state.selectedDogCards
     });
 
-    // Le serveur va retirer les cartes - on ne modifie pas state.myHand ici
     state.selectedDogCards = [];
-}
-
-// Import placeholder (sera fourni par card-utils.js)
-function renderPlayerHand() {
-    // Cette fonction est dans card-utils.js
-    console.log('renderPlayerHand appelé depuis dog-handler');
 }
 
 // Exposer les fonctions globalement
